@@ -1,0 +1,24 @@
+{
+  "name": "Quản Lý Nhà Trọ PWA",
+  "short_name": "Nhà Trọ PWA",
+  "description": "Ứng dụng PWA quản lý phòng trọ, chốt chỉ số điện nước, hoá đơn VietQR và báo sự cố",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
