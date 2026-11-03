@@ -1,0 +1,27 @@
+# Cấu hình Supabase CLI cho backend (chạy lệnh `supabase ...` từ thư mục backend/)
+# Supabase CLI đọc migrations ở backend/supabase/migrations: xem backend/README.md (mục Cài đặt).
+project_id = "nha-tro-pwa"
+
+[auth]
+site_url = "http://localhost:5173"
+
+[auth.sms]
+# Đăng nhập SĐT + mật khẩu; tài khoản do chủ trọ tạo nên không cần xác thực OTP
+enable_signup = false
+enable_confirmations = false
+
+[db.seed]
+enabled = true
+sql_paths = ["../seed/001_seed_data.sql"]
+
+# Hai function tự kiểm tra service-role key / CRON_SECRET (xem functions/_shared/guard.ts),
+# nên tắt verify_jwt để chạy được cả với khóa API kiểu mới (sb_secret_...).
+[functions.cron-reminders]
+enabled = true
+verify_jwt = false
+entrypoint = "../functions/cron-reminders/index.ts"
+
+[functions.send-webpush]
+enabled = true
+verify_jwt = false
+entrypoint = "../functions/send-webpush/index.ts"
