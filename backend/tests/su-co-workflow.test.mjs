@@ -61,7 +61,8 @@ before(async () => {
   `);
   const dir = new URL('../migrations/', import.meta.url);
   const migrations = (await readdir(dir)).filter((f) => f.endsWith('.sql')).sort();
-  for (const name of migrations.filter((f) => !f.startsWith('006_'))) {
+  // Chạy 001–005, chèn dữ liệu cũ, rồi chạy 006 trở đi để kiểm tra đường nâng cấp.
+  for (const name of migrations.filter((f) => f < '006_')) {
     await db.exec(await readFile(new URL(name, dir), 'utf8'));
   }
   for (const [i, name] of ['Quản trị', 'Chủ trọ', 'Quản lý', 'Thuê A', 'Thuê B'].entries()) {
@@ -84,7 +85,9 @@ before(async () => {
     INSERT INTO su_co (id, phong_id, nguoi_thue_id, tieu_de, trang_thai, hoan_tat_luc)
       VALUES ('${ISSUE_A}', '${ROOM_A}', '${TENANT_A}', 'Dữ liệu cũ', 'hoan_tat', '2026-10-01T10:00:00Z');
   `);
-  await db.exec(await readFile(new URL('006_quy_trinh_xu_ly_su_co.sql', dir), 'utf8'));
+  for (const name of migrations.filter((f) => f >= '006_')) {
+    await db.exec(await readFile(new URL(name, dir), 'utf8'));
+  }
   legacy = { issue: await getIssue(), history: await history() };
 });
 
@@ -262,4 +265,71 @@ test('RPC từ chối trạng thái sai, chi phí âm; anon không được gọ
     await rejectsCode(update(ISSUE_A, 'hoan_tat'), '42501');
     await rejectsCode(db.query('SELECT * FROM su_co'), '42501');
   } finally { await db.exec('RESET ROLE'); }
+});
+
+test('006: giữ ghi chú khi chỉ đổi chi phí; đổi trạng thái mà không ghi chú thì xóa ghi chú cũ', async () => {
+  await asUser(MANAGER, async () => {
+    await update(ISSUE_A, 'dang_xu_ly', 'Đã liên hệ thợ');
+    assert.equal((await update(ISSUE_A, 'dang_xu_ly', null, 50000)).ghi_chu_xu_ly, 'Đã liên hệ thợ');
+    assert.equal((await update(ISSUE_A, 'hoan_tat')).ghi_chu_xu_ly, null);
+  });
+});
+
+test('006: gọi lại cùng trạng thái, không đổi gì thì không ghi lịch sử rỗng', async () => {
+  await asUser(MANAGER, async () => {
+    await update(ISSUE_A, 'dang_xu_ly', 'Đã liên hệ thợ');
+    await update(ISSUE_A, 'dang_xu_ly');
+  });
+  assert.equal((await history()).length, 2);
+});
+
+test('006: chủ trọ nhận thông báo khi có sự cố mới, link /issues/<id>', async () => {
+  await asUser(OWNER, async () => {
+    const rows = (await db.query("SELECT duong_dan FROM thong_bao WHERE loai = 'su_co'")).rows;
+    assert.ok(rows.some((r) => r.duong_dan === `/issues/${ISSUE_A}`));
+  });
+  await asUser(TENANT_B, async () => {
+    assert.equal((await db.query("SELECT count(*)::int AS n FROM thong_bao WHERE duong_dan = $1", [`/issues/${ISSUE_A}`])).rows[0].n, 0);
+  });
+});
+
+test('006: chỉ sửa chi phí khi đang Chưa thể xử lý thì giữ lý do cũ, không bắt nhập lại', async () => {
+  await asUser(MANAGER, async () => {
+    await update(ISSUE_A, 'chua_the_xu_ly', 'Chờ linh kiện');
+    const row = await update(ISSUE_A, 'chua_the_xu_ly', null, 120000);
+    assert.equal(row.ghi_chu_xu_ly, 'Chờ linh kiện');
+    assert.equal(Number(row.chi_phi_sua_chua), 120000);
+    // đổi sang Chưa thể xử lý từ trạng thái khác mà không có lý do vẫn bị từ chối
+    await update(ISSUE_A, 'dang_xu_ly', 'Đã có linh kiện');
+    await rejectsCode(update(ISSUE_A, 'chua_the_xu_ly'), '22023');
+  });
+});
+
+test('006: quản lý tự tạo báo cáo thì không tự nhận thông báo', async () => {
+  const issue = id('40', 9);
+  await asUser(MANAGER, () => db.query(
+    'INSERT INTO su_co (id, phong_id, tieu_de) VALUES ($1, $2, $3)', [issue, ROOM_A, 'Quản lý tự báo'],
+  ));
+  await asUser(MANAGER, async () => {
+    assert.equal((await db.query('SELECT count(*)::int AS n FROM thong_bao WHERE duong_dan = $1', [`/issues/${issue}`])).rows[0].n, 0);
+  });
+  await asUser(OWNER, async () => {
+    assert.equal((await db.query('SELECT count(*)::int AS n FROM thong_bao WHERE duong_dan = $1', [`/issues/${issue}`])).rows[0].n, 1);
+  });
+});
+
+test('006: đổi trạng thái không gửi trùng và không tự báo cho người thao tác', async () => {
+  const count = (user, issue) => asUser(user, async () => (await db.query(
+    'SELECT count(*)::int AS n FROM thong_bao WHERE duong_dan = $1', [`/issues/${issue}`])).rows[0].n);
+  // Chủ trọ tự tạo, quản lý cập nhật: chủ trọ chỉ nhận 1 thông báo đổi trạng thái
+  const a = id('40', 7);
+  await asUser(OWNER, () => db.query('INSERT INTO su_co (id, phong_id, tieu_de) VALUES ($1, $2, $3)', [a, ROOM_A, 'Chủ tự báo']));
+  await asUser(MANAGER, () => update(a, 'dang_xu_ly', 'Đã nhận'));
+  assert.equal(await count(OWNER, a), 1);
+  // Quản lý tự tạo rồi tự cập nhật: không tự nhận thông báo nào
+  const b = id('40', 8);
+  await asUser(MANAGER, () => db.query('INSERT INTO su_co (id, phong_id, tieu_de) VALUES ($1, $2, $3)', [b, ROOM_A, 'QL tự báo']));
+  await asUser(MANAGER, () => update(b, 'hoan_tat', 'Xong'));
+  assert.equal(await count(MANAGER, b), 0);
+  assert.equal(await count(OWNER, b), 2);
 });
