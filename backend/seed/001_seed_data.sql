@@ -16,7 +16,8 @@ FROM (VALUES
   ('c1eebc99-9c0b-4ef8-bb6d-6bb9bd380a31', '84901234567', 'Nguyễn Văn Chủ Nhà'),
   ('c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32', '84987654321', 'Trần Thị Thuê'),
   ('c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', '84976543210', 'Lê Văn Khách'),
-  ('c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34', '84911111111', 'Phạm Thị Quản Lý')
+  ('c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34', '84911111111', 'Phạm Thị Quản Lý'),
+  ('c5eebc99-9c0b-4ef8-bb6d-6bb9bd380a35', '84922222222', 'Trần Quản Trị')
 ) AS v(id, so_dien_thoai, ho_ten)
 ON CONFLICT (id) DO NOTHING;
 
@@ -30,6 +31,7 @@ UPDATE nguoi_dung SET vai_tro = 'chu_tro', cccd = '079090001122' WHERE id = 'c1e
 UPDATE nguoi_dung SET cccd = '079092003344' WHERE id = 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32';
 UPDATE nguoi_dung SET cccd = '079095005566' WHERE id = 'c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33';
 UPDATE nguoi_dung SET vai_tro = 'quan_ly' WHERE id = 'c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34';
+UPDATE nguoi_dung SET vai_tro = 'quan_tri' WHERE id = 'c5eebc99-9c0b-4ef8-bb6d-6bb9bd380a35';
 
 -- 2. Khu trọ (kèm tài khoản nhận tiền để sinh VietQR: 970436 = Vietcombank)
 INSERT INTO khu_tro (id, ten, dia_chi, so_tang, don_gia_dien, don_gia_nuoc, phi_internet,
