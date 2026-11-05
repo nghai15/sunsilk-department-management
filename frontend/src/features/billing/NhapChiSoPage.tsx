@@ -1,6 +1,6 @@
 // src/features/billing/NhapChiSoPage.tsx
-// Màn hình nhập chỉ số công tơ điện + nước cho một phòng (kỳ tính tiền).
-// Dành cho chủ trọ / quản lý. Sau khi nhập xong, có thể gọi tao_hoa_don() (RPC).
+// Màn hình nhập chỉ số công tơ điện + nước cho một phòng theo kỳ tính tiền.
+// Dành cho chủ trọ / người quản lý kèm ảnh chụp công tơ và công thức tính tiền bậc thang.
 
 import { useState } from 'react';
 import type { PhongTro, KhuTro, LoaiCongTo } from '../../types';
@@ -16,7 +16,8 @@ export interface NhapChiSoPageProps {
   ky: string;           // YYYY-MM-01
   chiSoCuDien?: number; // lấy từ kỳ trước; 0 nếu chưa có
   chiSoCuNuoc?: number;
-  /** Callback thực tế lưu chỉ số lên Supabase */
+  hopDongId?: string;   // ID hợp đồng thuê phòng (nếu có để gọi tao_hoa_don)
+  /** Callback lưu chỉ số lên Supabase / CSDL */
   onLuuChiSo: (data: {
     phongId: string;
     loai: LoaiCongTo;
@@ -25,8 +26,8 @@ export interface NhapChiSoPageProps {
     chiSoMoi: number;
     anhFile?: File;
   }) => Promise<void>;
-  /** Sau khi lưu cả hai loại, có thể gọi để sinh hóa đơn */
-  onTaoHoaDon?: (phongId: string, ky: string) => Promise<void>;
+  /** Sau khi lưu cả hai loại, có thể gọi để sinh hóa đơn nháp */
+  onTaoHoaDon?: (id: string, ky: string) => Promise<void>;
 }
 
 // ─────────────────────────────────────────────
@@ -39,6 +40,7 @@ export function NhapChiSoPage({
   ky,
   chiSoCuDien = 0,
   chiSoCuNuoc = 0,
+  hopDongId,
   onLuuChiSo,
   onTaoHoaDon,
 }: NhapChiSoPageProps) {
@@ -50,16 +52,24 @@ export function NhapChiSoPage({
   const [dangTaoHD, setDangTaoHD] = useState(false);
   const [taoHDThanhCong, setTaoHDThanhCong] = useState(false);
 
-  const kyHienThi = new Date(ky).toLocaleDateString('vi-VN', {
-    month: 'long',
-    year: 'numeric',
-  });
+  // Hiển thị kỳ tháng/năm thân thiện
+  const kyHienThi = (() => {
+    try {
+      return new Date(ky).toLocaleDateString('vi-VN', {
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch {
+      return ky;
+    }
+  })();
 
   async function xuLyLuuChiSo(data: NhapChiSoCongToData) {
     setLoi(null);
     const setter = data.loai === 'dien' ? setDangLuuDien : setDangLuuNuoc;
     const doneSet = data.loai === 'dien' ? setDaLuuDien : setDaLuuNuoc;
     setter(true);
+
     try {
       await onLuuChiSo({
         phongId: phong.id,
@@ -71,7 +81,7 @@ export function NhapChiSoPage({
       });
       doneSet(true);
     } catch (err: unknown) {
-      setLoi(err instanceof Error ? err.message : 'Lỗi khi lưu chỉ số');
+      setLoi(err instanceof Error ? err.message : 'Lỗi khi lưu chỉ số công tơ');
     } finally {
       setter(false);
     }
@@ -82,7 +92,8 @@ export function NhapChiSoPage({
     setDangTaoHD(true);
     setLoi(null);
     try {
-      await onTaoHoaDon(phong.id, ky);
+      const targetId = hopDongId || phong.id;
+      await onTaoHoaDon(targetId, ky);
       setTaoHDThanhCong(true);
     } catch (err: unknown) {
       setLoi(err instanceof Error ? err.message : 'Lỗi khi tạo hóa đơn');
@@ -93,25 +104,35 @@ export function NhapChiSoPage({
 
   return (
     <div className="max-w-xl mx-auto space-y-6 py-4">
-      {/* Tiêu đề */}
-      <div>
-        <h2 className="text-lg font-bold text-gray-900">Nhập chỉ số công tơ</h2>
+      {/* Tiêu đề trang */}
+      <div className="border-b border-gray-200 pb-3">
+        <h2 className="text-xl font-bold text-gray-900">Ghi nhận chỉ số điện nước</h2>
         <p className="text-sm text-gray-500 mt-0.5">
-          Phòng {phong.soPhong} · {kyHienThi}
+          Phòng <strong>{phong.soPhong}</strong> · Kỳ {kyHienThi}
         </p>
       </div>
 
-      {/* Lỗi chung */}
+      {/* Thông báo lỗi */}
       {loi && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-          {loi}
+        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          ⚠️ {loi}
         </div>
       )}
 
-      {/* Form điện */}
+      {/* Form nhập điện */}
       {daLuuDien ? (
-        <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-4 text-sm text-green-800">
-          ✅ Đã lưu chỉ số <strong>điện</strong>
+        <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-4 text-sm text-green-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span>⚡</span>
+            <span>Đã lưu thành công chỉ số <strong>Điện</strong></span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDaLuuDien(false)}
+            className="text-xs text-green-700 underline hover:text-green-900"
+          >
+            Nhập lại
+          </button>
         </div>
       ) : (
         <NhapChiSoCongTo
@@ -122,10 +143,20 @@ export function NhapChiSoPage({
         />
       )}
 
-      {/* Form nước */}
+      {/* Form nhập nước */}
       {daLuuNuoc ? (
-        <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-4 text-sm text-green-800">
-          ✅ Đã lưu chỉ số <strong>nước</strong>
+        <div className="rounded-xl border border-green-200 bg-green-50 px-5 py-4 text-sm text-green-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span>💧</span>
+            <span>Đã lưu thành công chỉ số <strong>Nước</strong></span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setDaLuuNuoc(false)}
+            className="text-xs text-green-700 underline hover:text-green-900"
+          >
+            Nhập lại
+          </button>
         </div>
       ) : (
         <NhapChiSoCongTo
@@ -137,24 +168,30 @@ export function NhapChiSoPage({
         />
       )}
 
-      {/* Nút tạo hóa đơn (khi đã lưu đủ cả hai) */}
+      {/* Nút tạo hóa đơn (sau khi đã lưu cả điện và nước) */}
       {daLuuDien && daLuuNuoc && onTaoHoaDon && !taoHDThanhCong && (
-        <button
-          type="button"
-          onClick={xuLyTaoHoaDon}
-          disabled={dangTaoHD}
-          className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-        >
-          {dangTaoHD ? '⏳ Đang tạo hóa đơn...' : '📄 Tạo hóa đơn nháp'}
-        </button>
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={xuLyTaoHoaDon}
+            disabled={dangTaoHD}
+            className="w-full rounded-xl bg-indigo-600 px-4 py-3.5 text-sm font-bold text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-md flex items-center justify-center gap-2"
+          >
+            <span>📄</span>
+            <span>{dangTaoHD ? 'Đang tạo hóa đơn...' : 'Tạo hóa đơn nháp kỳ này'}</span>
+          </button>
+          <p className="text-xs text-gray-400 text-center mt-2">
+            Hóa đơn sẽ được tính tiền điện theo bậc thang EVN và tiền nước theo số khối đã nhập.
+          </p>
+        </div>
       )}
 
+      {/* Thông báo tạo hóa đơn thành công */}
       {taoHDThanhCong && (
-        <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-4 text-sm text-indigo-800 text-center font-medium">
-          🎉 Hóa đơn nháp đã được tạo! Vào mục Hóa đơn để phát hành.
+        <div className="rounded-xl border border-indigo-200 bg-indigo-50 px-5 py-4 text-sm text-indigo-800 text-center font-semibold">
+          🎉 Hóa đơn nháp đã được tạo thành công! Bạn có thể vào mục Hóa đơn để kiểm tra và phát hành cho người thuê.
         </div>
       )}
     </div>
   );
 }
-
