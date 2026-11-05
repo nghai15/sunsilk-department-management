@@ -1,4 +1,5 @@
 import { Route, Routes } from 'react-router-dom'
+import { InstallPrompt } from './components/InstallPrompt'
 import LoginPage from './features/auth/LoginPage'
 import { RequireAuth } from './features/auth/RequireAuth'
 import { useAuth } from './features/auth/useAuth'
@@ -7,6 +8,7 @@ function TrangChu() {
   const { user, signOut } = useAuth()
   return (
     <div className="p-6 space-y-2">
+    <InstallPrompt />
       <p>Xin chào {user?.hoTen} ({user?.vaiTro})</p>
       <button onClick={signOut} className="border rounded px-3 py-1">Đăng xuất</button>
     </div>
