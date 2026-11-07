@@ -21,8 +21,9 @@ FROM (VALUES
 ) AS v(id, so_dien_thoai, ho_ten)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO auth.identities (user_id, provider_id, identity_data, provider, last_sign_in_at)
-SELECT id, phone, jsonb_build_object('sub', id::text, 'phone', phone, 'phone_verified', true), 'phone', NOW()
+-- created_at/updated_at bắt buộc có giá trị: nếu để NULL, GoTrue báo 500 "Database error querying schema" khi đăng nhập
+INSERT INTO auth.identities (user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+SELECT id, phone, jsonb_build_object('sub', id::text, 'phone', phone, 'phone_verified', true), 'phone', NOW(), NOW(), NOW()
 FROM auth.users WHERE id IN ('c1eebc99-9c0b-4ef8-bb6d-6bb9bd380a31','c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32',
                              'c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33','c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34')
   AND NOT EXISTS (SELECT 1 FROM auth.identities i WHERE i.user_id = auth.users.id);
