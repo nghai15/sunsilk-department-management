@@ -3,7 +3,43 @@
 // Dùng cho src/features/billing/ và src/components/forms/
 
 // =====================================================================
-// 1. Công thức tính tiền điện bậc thang (theo biểu giá EVN mới nhất)
+// 1. Công thức tính tiền điện theo mặt bằng chung (đơn giá phẳng khu trọ)
+// =====================================================================
+
+/** Đơn giá điện mặt bằng chung của khu trọ (đồng/kWh) */
+export const DON_GIA_DIEN_MAT_BANG_MAC_DINH = 3_500;
+
+export interface KetQuaTinhDien {
+  soTieuThu: number;
+  donGia: number;
+  thanhTien: number;
+}
+
+/**
+ * Tính tiền điện theo công thức mặt bằng chung (đơn giá phẳng khu trọ).
+ * Công thức: Số tiêu thụ (kWh) × Đơn giá điện (đồng/kWh)
+ * @param chiSoCu   Chỉ số công tơ kỳ trước (kWh)
+ * @param chiSoMoi  Chỉ số công tơ kỳ này (kWh, >= chiSoCu)
+ * @param donGia    Đơn giá điện mặt bằng (mặc định 3.500 đ/kWh)
+ */
+export function tinhTienDienMatBang(
+  chiSoCu: number,
+  chiSoMoi: number,
+  donGia: number = DON_GIA_DIEN_MAT_BANG_MAC_DINH
+): KetQuaTinhDien {
+  const soCu = Number.isFinite(chiSoCu) ? Math.max(0, chiSoCu) : 0;
+  const soMoi = Number.isFinite(chiSoMoi) ? Math.max(0, chiSoMoi) : 0;
+  const soTieuThu = Math.max(0, soMoi - soCu);
+  const thanhTien = Math.round(soTieuThu * donGia);
+
+  return { soTieuThu, donGia, thanhTien };
+}
+
+/** Alias chuẩn cho tính tiền điện mặt bằng */
+export const tinhTienDien = tinhTienDienMatBang;
+
+// =====================================================================
+// 2. Biểu giá điện bậc thang EVN (khi cần tham chiếu hoặc đối soát)
 // =====================================================================
 
 export interface BacThangDien {
@@ -104,22 +140,10 @@ export function tinhTienDienBacThang(
 }
 
 // =====================================================================
-// 2. Tính tiền nước (hỗ trợ cả đơn giá phẳng & biểu giá bậc thang)
+// 3. Tính tiền nước (theo đơn giá mặt bằng của khu trọ)
 // =====================================================================
 
-export interface BacThangNuoc {
-  denM3: number;    // Giới hạn trên (m³)
-  donGia: number;   // đồng/m³
-  moTa?: string;
-}
-
-/** Biểu giá nước sinh hoạt bậc thang phổ biến */
-export const BIEU_GIA_NUOC_BAC_THANG: BacThangNuoc[] = [
-  { denM3: 10,       donGia: 8_500,  moTa: 'Bậc 1: Đến 10 m³' },
-  { denM3: 20,       donGia: 9_900,  moTa: 'Bậc 2: Từ trên 10 - 20 m³' },
-  { denM3: 30,       donGia: 16_000, moTa: 'Bậc 3: Từ trên 20 - 30 m³' },
-  { denM3: Infinity, donGia: 27_000, moTa: 'Bậc 4: Trên 30 m³' },
-];
+export const DON_GIA_NUOC_MAT_BANG_MAC_DINH = 20_000; // đồng/m³
 
 export interface KetQuaTinhNuoc {
   soTieuThu: number;
@@ -127,50 +151,20 @@ export interface KetQuaTinhNuoc {
 }
 
 /**
- * Tính tiền nước theo đơn giá phẳng của khu trọ.
+ * Tính tiền nước theo đơn giá mặt bằng phẳng của khu trọ.
+ * Công thức: Số tiêu thụ (m³) × Đơn giá nước (đồng/m³)
  */
 export function tinhTienNuoc(
   chiSoCu: number,
   chiSoMoi: number,
-  donGia: number
+  donGia: number = DON_GIA_NUOC_MAT_BANG_MAC_DINH
 ): KetQuaTinhNuoc {
   const soTieuThu = Math.max(0, chiSoMoi - chiSoCu);
   return { soTieuThu, thanhTien: Math.round(soTieuThu * donGia) };
 }
 
-/**
- * Tính tiền nước theo biểu giá bậc thang sinh hoạt.
- */
-export function tinhTienNuocBacThang(
-  chiSoCu: number,
-  chiSoMoi: number,
-  bieuGia: BacThangNuoc[] = BIEU_GIA_NUOC_BAC_THANG
-): {
-  soTieuThu: number;
-  thanhTien: number;
-  chiTietBac: { bac: number; m3: number; donGia: number; thanhTien: number; moTa?: string }[];
-} {
-  const soTieuThu = Math.max(0, chiSoMoi - chiSoCu);
-  let con = soTieuThu;
-  let thanhTien = 0;
-  let daQua = 0;
-
-  const chiTietBac = bieuGia.map((bac, idx) => {
-    if (con <= 0) return { bac: idx + 1, m3: 0, donGia: bac.donGia, thanhTien: 0, moTa: bac.moTa };
-    const dungTich = bac.denM3 === Infinity ? Infinity : Math.max(0, bac.denM3 - daQua);
-    const m3 = bac.denM3 === Infinity ? con : Math.min(con, dungTich);
-    const tien = m3 * bac.donGia;
-    con -= m3;
-    daQua = bac.denM3 === Infinity ? daQua : bac.denM3;
-    thanhTien += tien;
-    return { bac: idx + 1, m3, donGia: bac.donGia, thanhTien: tien, moTa: bac.moTa };
-  });
-
-  return { soTieuThu, thanhTien: Math.round(thanhTien), chiTietBac };
-}
-
 // =====================================================================
-// 3. Tạo VietQR QuickLink (chuẩn img.vietqr.io)
+// 4. Tạo VietQR QuickLink (chuẩn img.vietqr.io)
 // =====================================================================
 
 export interface ThamSoVietQR {
@@ -186,9 +180,6 @@ export interface ThamSoVietQR {
 /**
  * Tạo URL ảnh VietQR QuickLink để hiển thị hoặc quét chuyển khoản.
  * Chuẩn: https://img.vietqr.io/image/<BANK_ID>-<ACCOUNT_NO>-<TEMPLATE>.<EXT>?amount=<AMOUNT>&addInfo=<MEMO>&accountName=<NAME>
- * @example
- *   taoUrlVietQR({ maBin: 'MB', soTaiKhoan: '132465798', soTien: 3500000, noiDung: 'PHONGP101 T10' })
- *   => "https://img.vietqr.io/image/MB-132465798-compact2.png?amount=3500000&addInfo=PHONGP101%20T10"
  */
 export function taoUrlVietQR({
   maBin,
@@ -224,14 +215,11 @@ export function taoUrlVietQR({
  * @example taoNoiDungChuyenKhoan('101', '05/2024')  => "PHONG101 T5"
  */
 export function taoNoiDungChuyenKhoan(soPhong: string, thangNam: string): string {
-  // Chuẩn hóa số phòng
   let phongClean = (soPhong || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-  // Nếu đã bắt đầu bằng "PHONG" thì giữ nguyên, tránh "PHONGPHONG101"
   if (phongClean.startsWith('PHONG')) {
     phongClean = phongClean.replace(/^PHONG/, '');
   }
 
-  // Tách tháng từ chuỗi MM/YYYY hoặc YYYY-MM
   let rawThang = thangNam;
   if (thangNam.includes('/')) {
     rawThang = thangNam.split('/')[0];
@@ -245,7 +233,7 @@ export function taoNoiDungChuyenKhoan(soPhong: string, thangNam: string): string
 }
 
 // =====================================================================
-// 4. Kiểm tra & xác nhận UNC (Ủy Nhiệm Chi)
+// 5. Kiểm tra & xác nhận UNC (Ủy Nhiệm Chi)
 // =====================================================================
 
 export type TrangThaiUNC = 'cho_duyet' | 'da_duyet' | 'tu_choi';

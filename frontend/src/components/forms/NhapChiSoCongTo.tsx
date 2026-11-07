@@ -1,14 +1,15 @@
 // src/components/forms/NhapChiSoCongTo.tsx
 // Form nhập chỉ số công tơ điện/nước kèm ảnh chụp công tơ.
-// Hỗ trợ công thức tính tiền bậc thang cho điện và đơn giá phẳng cho nước.
+// Áp dụng công thức tính tiền theo mặt bằng chung khu trọ (đơn giá phẳng).
 
 import { useRef, useState } from 'react';
 import type { LoaiCongTo } from '../../types';
 import {
-  tinhTienDienBacThang,
+  tinhTienDienMatBang,
   tinhTienNuoc,
   xacNhanFileUNC,
-  type KetQuaTinhDienBacThang,
+  DON_GIA_DIEN_MAT_BANG_MAC_DINH,
+  DON_GIA_NUOC_MAT_BANG_MAC_DINH,
 } from '../../utils/billing';
 import { formatCurrencyVND } from '../../utils';
 
@@ -19,7 +20,8 @@ import { formatCurrencyVND } from '../../utils';
 export interface NhapChiSoCongToProps {
   loai: LoaiCongTo;
   chiSoCu: number;
-  donGiaNuoc?: number;    // đ/m³ – dùng khi loai = 'nuoc'
+  donGiaDien?: number;    // đ/kWh – dùng khi loai = 'dien' (mặc định 3.500 đ/kWh)
+  donGiaNuoc?: number;    // đ/m³ – dùng khi loai = 'nuoc' (mặc định 20.000 đ/m³)
   dangLuu?: boolean;
   onSubmit: (data: NhapChiSoCongToData) => void | Promise<void>;
 }
@@ -38,7 +40,8 @@ export interface NhapChiSoCongToData {
 export function NhapChiSoCongTo({
   loai,
   chiSoCu,
-  donGiaNuoc = 20_000,
+  donGiaDien = DON_GIA_DIEN_MAT_BANG_MAC_DINH,
+  donGiaNuoc = DON_GIA_NUOC_MAT_BANG_MAC_DINH,
   dangLuu = false,
   onSubmit,
 }: NhapChiSoCongToProps) {
@@ -46,23 +49,21 @@ export function NhapChiSoCongTo({
   const [anhFile, setAnhFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [loi, setLoi] = useState<string | null>(null);
-  const [hienChiTietBac, setHienChiTietBac] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const soMoi = Number(chiSoMoi);
   const daNhap = chiSoMoi.trim() !== '';
   const hopLe = daNhap && !Number.isNaN(soMoi) && soMoi >= chiSoCu;
 
-  // Tính toán ước tính mức tiêu thụ và chi phí
+  // Tính toán ước tính mức tiêu thụ và chi phí theo công thức mặt bằng
   let soTieuThu = 0;
   let uocTinh = 0;
-  let ketQuaDien: KetQuaTinhDienBacThang | null = null;
 
   if (hopLe) {
     if (loai === 'dien') {
-      ketQuaDien = tinhTienDienBacThang(chiSoCu, soMoi);
-      soTieuThu = ketQuaDien.soTieuThu;
-      uocTinh = ketQuaDien.thanhTien;
+      const ktDien = tinhTienDienMatBang(chiSoCu, soMoi, donGiaDien);
+      soTieuThu = ktDien.soTieuThu;
+      uocTinh = ktDien.thanhTien;
     } else {
       const ktNuoc = tinhTienNuoc(chiSoCu, soMoi, donGiaNuoc);
       soTieuThu = ktNuoc.soTieuThu;
@@ -110,6 +111,7 @@ export function NhapChiSoCongTo({
   const nhanLoai = loai === 'dien' ? 'Điện' : 'Nước';
   const donViLoai = loai === 'dien' ? 'kWh' : 'm³';
   const bieuTuong = loai === 'dien' ? '⚡' : '💧';
+  const donGiaHienThi = loai === 'dien' ? donGiaDien : donGiaNuoc;
 
   return (
     <form
@@ -122,8 +124,8 @@ export function NhapChiSoCongTo({
           <span>{bieuTuong}</span>
           <span>Nhập chỉ số công tơ {nhanLoai}</span>
         </h3>
-        <span className="text-xs px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 font-medium">
-          Đơn vị: {donViLoai}
+        <span className="text-xs px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 font-medium">
+          Mặt bằng: {donGiaHienThi.toLocaleString('vi-VN')} đ/{donViLoai}
         </span>
       </div>
 
@@ -171,9 +173,9 @@ export function NhapChiSoCongTo({
         </p>
       )}
 
-      {/* Preview tính tiền bậc thang / tiêu thụ */}
+      {/* Preview tính tiền theo công thức mặt bằng */}
       {hopLe && (
-        <div className="rounded-lg bg-blue-50/80 border border-blue-100 px-4 py-3 text-sm space-y-2">
+        <div className="rounded-lg bg-blue-50/80 border border-blue-100 px-4 py-3 text-sm space-y-1.5">
           <div className="flex items-center justify-between text-blue-900 font-medium">
             <span>Tiêu thụ kỳ này:</span>
             <span className="font-bold text-base font-mono">
@@ -183,49 +185,14 @@ export function NhapChiSoCongTo({
 
           <div className="flex items-center justify-between text-blue-800">
             <span>Ước tính thành tiền:</span>
-            <span className="font-bold text-blue-700 text-base">
+            <span className="font-bold text-blue-700 text-base font-mono">
               {formatCurrencyVND(uocTinh)}
             </span>
           </div>
 
-          {loai === 'dien' && ketQuaDien && (
-            <div className="pt-1 border-t border-blue-200/60">
-              <button
-                type="button"
-                onClick={() => setHienChiTietBac((prev) => !prev)}
-                className="text-xs font-medium text-blue-600 hover:text-blue-800 flex items-center gap-1"
-              >
-                <span>{hienChiTietBac ? '▲ Ẩn chi tiết bậc thang EVN' : '▼ Xem chi tiết bậc thang EVN'}</span>
-              </button>
-
-              {hienChiTietBac && (
-                <div className="mt-2 space-y-1 bg-white/90 rounded-md p-2.5 text-xs border border-blue-100">
-                  <div className="grid grid-cols-4 font-semibold text-gray-500 pb-1 border-b">
-                    <span>Bậc</span>
-                    <span className="text-right">Số kWh</span>
-                    <span className="text-right">Đơn giá</span>
-                    <span className="text-right">Thành tiền</span>
-                  </div>
-                  {ketQuaDien.chiTietBac
-                    .filter((b) => b.kwh > 0)
-                    .map((b) => (
-                      <div key={b.bac} className="grid grid-cols-4 text-gray-700 py-0.5">
-                        <span>Bậc {b.bac}</span>
-                        <span className="text-right font-mono">{b.kwh}</span>
-                        <span className="text-right text-gray-500">{b.donGia.toLocaleString('vi-VN')} đ</span>
-                        <span className="text-right font-medium text-gray-900">{formatCurrencyVND(b.thanhTien)}</span>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {loai === 'nuoc' && (
-            <p className="text-xs text-blue-600">
-              * Đơn giá nước: {donGiaNuoc.toLocaleString('vi-VN')} đ/m³
-            </p>
-          )}
+          <p className="text-xs text-blue-600 pt-1 border-t border-blue-200/50">
+            * Tính theo công thức mặt bằng: {soTieuThu} {donViLoai} × {donGiaHienThi.toLocaleString('vi-VN')} đ = {formatCurrencyVND(uocTinh)}
+          </p>
         </div>
       )}
 

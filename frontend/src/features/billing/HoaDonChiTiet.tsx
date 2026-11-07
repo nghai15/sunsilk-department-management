@@ -1,6 +1,6 @@
 // src/features/billing/HoaDonChiTiet.tsx
 // Trang chi tiết hóa đơn tháng:
-//   - Bảng các khoản thu (tiền phòng, điện bậc thang, nước, dịch vụ)
+//   - Bảng các khoản thu (tiền phòng, điện mặt bằng, nước, dịch vụ)
 //   - Card VietQR QuickLink để quét thanh toán nhanh
 //   - Form người thuê gửi xác nhận chuyển khoản UNC kèm ảnh biên lai
 //   - Khung chủ trọ / quản lý duyệt hoặc từ chối chuyển khoản UNC
@@ -12,7 +12,6 @@ import { formatCurrencyVND } from '../../utils';
 import {
   NHAN_TRANG_THAI_UNC,
   MAU_TRANG_THAI_UNC,
-  tinhTienDienBacThang,
   type TrangThaiUNC,
 } from '../../utils/billing';
 import { VietQRCard } from './VietQRCard';
@@ -83,8 +82,10 @@ export function HoaDonChiTiet({
   // Map trạng thái hóa đơn → badge UNC
   const trangThaiUNC = toTrangThaiUNC(hoaDon.trangThaiThanhToan);
 
-  // Chi tiết bậc thang điện (tính theo EVN)
-  const bacThangDien = tinhTienDienBacThang(hoaDon.chiSoDienCu, hoaDon.chiSoDienMoi);
+  // Tính tiền điện theo công thức mặt bằng
+  const donGiaDien = khuTro.donGiaDien || 3500;
+  const soKwhDien = Math.max(0, hoaDon.chiSoDienMoi - hoaDon.chiSoDienCu);
+  const tienDienMatBang = Math.round(soKwhDien * donGiaDien);
 
   async function xuLyGuiBienLai(data: XacNhanThanhToanUNCData) {
     if (!onGuiBienLai) return;
@@ -168,58 +169,24 @@ export function HoaDonChiTiet({
         </table>
       </div>
 
-      {/* ── Chi tiết bậc thang điện (EVN) ── */}
-      <details className="rounded-xl border border-blue-100 bg-white shadow-sm overflow-hidden group">
-        <summary className="cursor-pointer px-5 py-3.5 text-sm font-semibold text-blue-900 bg-blue-50/50 hover:bg-blue-50 flex items-center justify-between">
-          <span className="flex items-center gap-2">
-            <span>📊</span>
-            <span>Chi tiết tính tiền điện bậc thang ({bacThangDien.soTieuThu} kWh)</span>
-          </span>
-          <span className="text-xs text-blue-600 group-open:rotate-180 transition-transform">▼</span>
-        </summary>
-        <div className="px-5 py-3 space-y-3">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="text-gray-500 border-b pb-1 font-semibold">
-                <th className="text-left pb-1">Bậc lũy tiến</th>
-                <th className="text-right pb-1">Sản lượng (kWh)</th>
-                <th className="text-right pb-1">Đơn giá EVN</th>
-                <th className="text-right pb-1">Thành tiền</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {bacThangDien.chiTietBac
-                .filter((b) => b.kwh > 0)
-                .map((b) => (
-                  <tr key={b.bac} className="hover:bg-gray-50">
-                    <td className="py-1.5 text-gray-700 font-medium">Bậc {b.bac}</td>
-                    <td className="py-1.5 text-right text-gray-800 font-mono">{b.kwh}</td>
-                    <td className="py-1.5 text-right text-gray-600">
-                      {b.donGia.toLocaleString('vi-VN')} ₫
-                    </td>
-                    <td className="py-1.5 text-right font-semibold text-gray-900 font-mono">
-                      {formatCurrencyVND(b.thanhTien)}
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t border-gray-200">
-                <td colSpan={3} className="pt-2 font-bold text-gray-700 text-xs">Tổng tiền điện bậc thang</td>
-                <td className="pt-2 text-right font-black text-blue-700 text-xs font-mono">
-                  {formatCurrencyVND(bacThangDien.thanhTien)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-          <p className="text-[11px] text-gray-400 italic">
-            * Áp dụng theo biểu giá bán lẻ điện sinh hoạt 6 bậc EVN (QĐ 2699/QĐ-BCT).
-          </p>
+      {/* ── Chi tiết tiền điện theo đơn giá mặt bằng ── */}
+      <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-4 shadow-sm flex items-center justify-between text-sm">
+        <div className="flex items-center gap-2.5">
+          <span className="text-xl">⚡</span>
+          <div>
+            <p className="font-semibold text-gray-800">Tiền điện theo đơn giá mặt bằng</p>
+            <p className="text-xs text-gray-500 font-mono mt-0.5">
+              {soKwhDien} kWh × {donGiaDien.toLocaleString('vi-VN')} đ/kWh
+            </p>
+          </div>
         </div>
-      </details>
+        <span className="font-bold text-blue-700 font-mono text-base">
+          {formatCurrencyVND(hoaDon.tienDien || tienDienMatBang)}
+        </span>
+      </div>
 
-      {/* ── VietQR QuickLink (Người thuê quét mã chuyển khoản) ── */}
-      {hoaDon.trangThaiThanhToan !== 'da_thanh_toan' && (
+      {/* ── VietQR QuickLink (Chỉ hiển thị cho Người thuê để quét mã thanh toán) ── */}
+      {laNguoiThue && hoaDon.trangThaiThanhToan !== 'da_thanh_toan' && (
         <VietQRCard
           maBin={khuTro.maBinNganHang || 'MB'}
           tenNganHang="MBBank"
@@ -258,7 +225,6 @@ export function HoaDonChiTiet({
         />
       )}
 
-      {/* Thông báo sau khi chủ trọ duyệt / từ chối */}
       {thongBaoDuyet && (
         <div className="rounded-xl border border-blue-200 bg-blue-50 px-5 py-4 text-sm text-blue-800 font-medium text-center">
           🎉 {thongBaoDuyet}
