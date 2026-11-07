@@ -25,7 +25,8 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO auth.identities (user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
 SELECT id, phone, jsonb_build_object('sub', id::text, 'phone', phone, 'phone_verified', true), 'phone', NOW(), NOW(), NOW()
 FROM auth.users WHERE id IN ('c1eebc99-9c0b-4ef8-bb6d-6bb9bd380a31','c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32',
-                             'c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33','c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34')
+                             'c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33','c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34',
+                             'c5eebc99-9c0b-4ef8-bb6d-6bb9bd380a35')
   AND NOT EXISTS (SELECT 1 FROM auth.identities i WHERE i.user_id = auth.users.id);
 
 UPDATE nguoi_dung SET vai_tro = 'chu_tro', cccd = '079090001122' WHERE id = 'c1eebc99-9c0b-4ef8-bb6d-6bb9bd380a31';
@@ -136,3 +137,14 @@ INSERT INTO su_co (phong_id, nguoi_thue_id, tieu_de, mo_ta, phan_loai, trang_tha
 SELECT 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32',
        'Máy lạnh không mát', 'Bật máy lạnh 30 phút vẫn không mát, có tiếng kêu lạ.', 'may_lanh', 'cho_tiep_nhan'
 WHERE NOT EXISTS (SELECT 1 FROM su_co);
+
+UPDATE auth.users SET
+  confirmation_token = COALESCE(confirmation_token, ''),
+  recovery_token = COALESCE(recovery_token, ''),
+  email_change_token_new = COALESCE(email_change_token_new, ''),
+  email_change = COALESCE(email_change, ''),
+  email_change_token_current = COALESCE(email_change_token_current, ''),
+  phone_change = COALESCE(phone_change, ''),
+  phone_change_token = COALESCE(phone_change_token, ''),
+  reauthentication_token = COALESCE(reauthentication_token, '')
+WHERE id::text LIKE 'c_eebc99-%';
