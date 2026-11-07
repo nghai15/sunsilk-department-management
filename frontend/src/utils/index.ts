@@ -1,10 +1,12 @@
 // src/utils/index.ts
-// Tiện ích chung cho hệ thống: Định dạng tiền tệ VNĐ, công thức điện nước bậc thang, VietQR QuickLink, v.v.
+// Tiện ích chung cho hệ thống: Định dạng tiền tệ VNĐ, công thức điện nước mặt bằng, VietQR QuickLink, v.v.
 
 import {
-  tinhTienDienBacThang,
+  tinhTienDienMatBang,
   tinhTienNuoc,
   taoUrlVietQR,
+  DON_GIA_DIEN_MAT_BANG_MAC_DINH,
+  DON_GIA_NUOC_MAT_BANG_MAC_DINH,
 } from './billing';
 
 export * from './billing';
@@ -24,30 +26,26 @@ export function formatCurrencyVND(amount: number): string {
 }
 
 /**
- * Tính tiền điện tiêu thụ theo chỉ số mới và cũ.
- * Nếu không truyền unitPrice hoặc truyền unitPrice <= 0, sẽ tự động áp dụng công thức bậc thang EVN.
+ * Tính tiền điện tiêu thụ theo công thức mặt bằng chung (đơn giá phẳng khu trọ).
+ * Công thức: Số tiêu thụ (kWh) × Đơn giá điện (đồng/kWh)
  */
 export function calculateElectricityCost(
   prevIndex: number,
   currIndex: number,
-  unitPrice?: number
+  unitPrice: number = DON_GIA_DIEN_MAT_BANG_MAC_DINH
 ): { usage: number; cost: number } {
-  const usage = Math.max(0, currIndex - prevIndex);
-  if (unitPrice && unitPrice > 0) {
-    const cost = Math.round(usage * unitPrice);
-    return { usage, cost };
-  }
-  const ketQua = tinhTienDienBacThang(prevIndex, currIndex);
-  return { usage: ketQua.soTieuThu, cost: ketQua.thanhTien };
+  const kq = tinhTienDienMatBang(prevIndex, currIndex, unitPrice);
+  return { usage: kq.soTieuThu, cost: kq.thanhTien };
 }
 
 /**
- * Tính tiền nước tiêu thụ theo chỉ số mới và cũ (hoặc theo khối)
+ * Tính tiền nước tiêu thụ theo công thức mặt bằng chung (đơn giá phẳng khu trọ).
+ * Công thức: Số tiêu thụ (m³) × Đơn giá nước (đồng/m³)
  */
 export function calculateWaterCost(
   prevIndex: number,
   currIndex: number,
-  unitPrice: number
+  unitPrice: number = DON_GIA_NUOC_MAT_BANG_MAC_DINH
 ): { usage: number; cost: number } {
   const kq = tinhTienNuoc(prevIndex, currIndex, unitPrice);
   return { usage: kq.soTieuThu, cost: kq.thanhTien };

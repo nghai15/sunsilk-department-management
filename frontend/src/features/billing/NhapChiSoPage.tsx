@@ -1,6 +1,6 @@
 // src/features/billing/NhapChiSoPage.tsx
 // Màn hình nhập chỉ số công tơ điện + nước cho một phòng theo kỳ tính tiền.
-// Dành cho chủ trọ / người quản lý kèm ảnh chụp công tơ và công thức tính tiền bậc thang.
+// Dành cho chủ trọ / người quản lý kèm ảnh chụp công tơ và công thức tính tiền mặt bằng.
 
 import { useState } from 'react';
 import type { PhongTro, KhuTro, LoaiCongTo } from '../../types';
@@ -138,6 +138,7 @@ export function NhapChiSoPage({
         <NhapChiSoCongTo
           loai="dien"
           chiSoCu={chiSoCuDien}
+          donGiaDien={khuTro.donGiaDien || 3500}
           dangLuu={dangLuuDien}
           onSubmit={xuLyLuuChiSo}
         />
@@ -162,7 +163,7 @@ export function NhapChiSoPage({
         <NhapChiSoCongTo
           loai="nuoc"
           chiSoCu={chiSoCuNuoc}
-          donGiaNuoc={khuTro.donGiaNuoc}
+          donGiaNuoc={khuTro.donGiaNuoc || 20000}
           dangLuu={dangLuuNuoc}
           onSubmit={xuLyLuuChiSo}
         />
@@ -181,7 +182,7 @@ export function NhapChiSoPage({
             <span>{dangTaoHD ? 'Đang tạo hóa đơn...' : 'Tạo hóa đơn nháp kỳ này'}</span>
           </button>
           <p className="text-xs text-gray-400 text-center mt-2">
-            Hóa đơn sẽ được tính tiền điện theo bậc thang EVN và tiền nước theo số khối đã nhập.
+            Hóa đơn sẽ được tính theo đơn giá mặt bằng điện và nước đã thiết lập cho khu trọ.
           </p>
         </div>
       )}

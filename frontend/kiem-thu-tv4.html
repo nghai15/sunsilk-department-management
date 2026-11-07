@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiểm Thử Frontend TV4: Hóa Đơn & VietQR QuickLink (Công Thức Mặt Bằng)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .tab-btn.active { background-color: #2563eb; color: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen py-8 px-4 sm:px-6">
+
+  <div class="max-w-4xl mx-auto space-y-6">
+    
+    <!-- Header Card -->
+    <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <span class="text-xs font-bold uppercase tracking-wider bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
+            Nhiệm Vụ TV4 - Frontend
+          </span>
+          <h1 class="text-2xl font-black text-gray-900 mt-2">
+            Hóa Đơn & VietQR QuickLink
+          </h1>
+          <p class="text-sm text-gray-500 mt-1">
+            Công thức tính tiền điện mặt bằng • Nhập chỉ số kèm ảnh công tơ • VietQR QuickLink • Xác nhận UNC
+          </p>
+        </div>
+        <span class="inline-flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 px-3 py-2 rounded-xl border border-green-200">
+          <span class="h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
+          Đang chạy trực tiếp
+        </span>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="flex flex-wrap gap-2 mt-6 pt-4 border-t border-gray-100">
+        <button onclick="chuyenTab('nhap_chi_so')" id="btn-tab-nhap_chi_so" class="tab-btn active px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-gray-100 text-gray-700 hover:bg-gray-200">
+          ⚡ 1. Nhập chỉ số & Ảnh công tơ
+        </button>
+        <button onclick="chuyenTab('mat_bang')" id="btn-tab-mat_bang" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-gray-100 text-gray-700 hover:bg-gray-200">
+          🧮 2. Công thức điện mặt bằng
+        </button>
+        <button onclick="chuyenTab('vietqr')" id="btn-tab-vietqr" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-gray-100 text-gray-700 hover:bg-gray-200">
+          💳 3. Tạo mã VietQR QuickLink
+        </button>
+        <button onclick="chuyenTab('unc')" id="btn-tab-unc" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all bg-gray-100 text-gray-700 hover:bg-gray-200">
+          🛡️ 4. Xác nhận chuyển khoản UNC
+        </button>
+      </div>
+    </div>
+
+    <!-- Thông báo nổi -->
+    <div id="toast" class="hidden rounded-xl bg-green-50 border border-green-200 p-4 text-sm font-medium text-green-800 shadow-sm transition-all"></div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 1: NHẬP CHỈ SỐ ĐIỆN NƯỚC KÈM ẢNH CHỤP CÔNG TƠ -->
+    <!-- ===================================================================== -->
+    <div id="tab-nhap_chi_so" class="tab-content space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Form Điện (Mặt bằng) -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm space-y-4">
+          <div class="flex items-center justify-between border-b pb-3">
+            <h3 class="text-base font-bold text-gray-800 flex items-center gap-2">
+              <span>⚡</span> Nhập chỉ số công tơ Điện
+            </h3>
+            <span class="text-xs px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 font-semibold">Mặt bằng: 3.500 đ/kWh</span>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Chỉ số cũ (kWh)</label>
+              <input type="number" id="dien-cu" value="1250" readonly class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono text-gray-600">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Chỉ số mới (kWh) <span class="text-red-500">*</span></label>
+              <input type="number" id="dien-moi" value="1425" oninput="tinhToanDienForm()" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-400 focus:outline-none">
+              <p id="dien-loi" class="hidden text-xs text-red-600 mt-1">⚠️ Chỉ số mới phải ≥ chỉ số cũ (1250)</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Đơn giá điện mặt bằng (đ/kWh)</label>
+              <input type="number" id="dien-don-gia" value="3500" step="100" oninput="tinhToanDienForm()" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">
+            </div>
+
+            <!-- Ước tính tiêu thụ -->
+            <div id="dien-preview" class="rounded-lg bg-blue-50 border border-blue-100 p-3 text-sm space-y-1.5">
+              <div class="flex justify-between text-blue-900 font-medium">
+                <span>Tiêu thụ:</span>
+                <span id="dien-kwh-tieu-thu" class="font-bold font-mono">175 kWh</span>
+              </div>
+              <div class="flex justify-between text-blue-800">
+                <span>Ước tính tiền điện:</span>
+                <span id="dien-thanh-tien" class="font-bold text-blue-700 text-base font-mono">612.500 ₫</span>
+              </div>
+              <div id="dien-ghi-chu-ct" class="text-[11px] text-blue-600 italic">* 175 kWh × 3.500 đ = 612.500 ₫</div>
+            </div>
+
+            <!-- Upload ảnh công tơ -->
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1.5">Ảnh chụp công tơ điện</label>
+              <input type="file" id="dien-file" accept="image/*" capture="environment" onchange="previewAnh(this, 'dien-img-preview', 'dien-preview-box')" class="block w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer">
+              
+              <div id="dien-preview-box" class="hidden mt-2 relative inline-block">
+                <img id="dien-img-preview" src="" alt="Ảnh công tơ điện" class="h-32 w-auto rounded-lg border border-gray-200 object-cover shadow-sm">
+                <button type="button" onclick="xoaAnh('dien-file', 'dien-preview-box')" class="absolute -top-2 -right-2 rounded-full bg-red-500 text-white w-5 h-5 flex items-center justify-center text-xs shadow hover:bg-red-600">×</button>
+              </div>
+            </div>
+
+            <button type="button" onclick="luuChiSo('Điện')" class="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 shadow-sm transition-colors">
+              Lưu chỉ số Điện
+            </button>
+          </div>
+        </div>
+
+        <!-- Form Nước -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm space-y-4">
+          <div class="flex items-center justify-between border-b pb-3">
+            <h3 class="text-base font-bold text-gray-800 flex items-center gap-2">
+              <span>💧</span> Nhập chỉ số công tơ Nước
+            </h3>
+            <span class="text-xs px-2.5 py-1 rounded-full bg-cyan-50 text-cyan-700 font-semibold">Mặt bằng: 20.000 đ/m³</span>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs text-gray-500 mb-1">Chỉ số cũ (m³)</label>
+              <input type="number" id="nuoc-cu" value="45" readonly class="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-mono text-gray-600">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Chỉ số mới (m³) <span class="text-red-500">*</span></label>
+              <input type="number" id="nuoc-moi" value="53" oninput="tinhToanNuocForm()" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-400 focus:outline-none">
+              <p id="nuoc-loi" class="hidden text-xs text-red-600 mt-1">⚠️ Chỉ số mới phải ≥ chỉ số cũ (45)</p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Đơn giá nước mặt bằng (đ/m³)</label>
+              <input type="number" id="nuoc-don-gia" value="20000" step="1000" oninput="tinhToanNuocForm()" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">
+            </div>
+
+            <!-- Ước tính tiêu thụ -->
+            <div id="nuoc-preview" class="rounded-lg bg-cyan-50 border border-cyan-100 p-3 text-sm space-y-1.5">
+              <div class="flex justify-between text-cyan-900 font-medium">
+                <span>Tiêu thụ:</span>
+                <span id="nuoc-m3-tieu-thu" class="font-bold font-mono">8 m³</span>
+              </div>
+              <div class="flex justify-between text-cyan-800">
+                <span>Ước tính tiền nước:</span>
+                <span id="nuoc-thanh-tien" class="font-bold text-cyan-700 text-base font-mono">160.000 ₫</span>
+              </div>
+              <div id="nuoc-ghi-chu-ct" class="text-[11px] text-cyan-600 italic">* 8 m³ × 20.000 đ = 160.000 ₫</div>
+            </div>
+
+            <!-- Upload ảnh công tơ -->
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1.5">Ảnh chụp công tơ nước</label>
+              <input type="file" id="nuoc-file" accept="image/*" capture="environment" onchange="previewAnh(this, 'nuoc-img-preview', 'nuoc-preview-box')" class="block w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-cyan-50 file:text-cyan-700 hover:file:bg-cyan-100 cursor-pointer">
+              
+              <div id="nuoc-preview-box" class="hidden mt-2 relative inline-block">
+                <img id="nuoc-img-preview" src="" alt="Ảnh công tơ nước" class="h-32 w-auto rounded-lg border border-gray-200 object-cover shadow-sm">
+                <button type="button" onclick="xoaAnh('nuoc-file', 'nuoc-preview-box')" class="absolute -top-2 -right-2 rounded-full bg-red-500 text-white w-5 h-5 flex items-center justify-center text-xs shadow hover:bg-red-600">×</button>
+              </div>
+            </div>
+
+            <button type="button" onclick="luuChiSo('Nước')" class="w-full rounded-lg bg-cyan-600 py-2.5 text-sm font-semibold text-white hover:bg-cyan-700 shadow-sm transition-colors">
+              Lưu chỉ số Nước
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 2: CÔNG THỨC TÍNH TIỀN ĐIỆN THEO MẶT BẰNG -->
+    <!-- ===================================================================== -->
+    <div id="tab-mat_bang" class="tab-content hidden space-y-6">
+      <div class="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-5">
+        <div>
+          <h2 class="text-lg font-bold text-gray-900">Mô Phỏng Công Thức Tính Tiền Điện Theo Mặt Bằng</h2>
+          <p class="text-xs text-gray-500 mt-1">Công thức: Thành tiền = Sản lượng tiêu thụ (kWh) × Đơn giá điện mặt bằng (đ/kWh)</p>
+        </div>
+
+        <!-- Nhập số kWh thử nghiệm -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Sản lượng tiêu thụ (kWh):</label>
+            <input type="number" id="test-kwh" value="175" min="0" oninput="capNhatMatBang()" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono font-bold">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-gray-700 mb-1">Đơn giá điện mặt bằng (đ/kWh):</label>
+            <input type="number" id="test-price" value="3500" min="0" step="100" oninput="capNhatMatBang()" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono font-bold">
+          </div>
+        </div>
+
+        <!-- Kết quả mô phỏng -->
+        <div class="rounded-xl border border-gray-200 bg-gray-50 p-5 space-y-3">
+          <div class="flex justify-between items-center text-sm">
+            <span class="text-gray-600 font-medium">Công thức tính:</span>
+            <span id="cong-thuc-text" class="font-mono font-bold text-gray-800">175 kWh × 3.500 ₫</span>
+          </div>
+          <div class="flex justify-between items-center border-t pt-3">
+            <span class="text-base font-bold text-gray-800">Tổng tiền điện:</span>
+            <span id="tong-tien-mat-bang" class="text-2xl font-black text-blue-700 font-mono">612.500 ₫</span>
+          </div>
+        </div>
+
+        <!-- Thẻ đối soát nhanh -->
+        <div class="grid grid-cols-3 gap-3">
+          <button onclick="setTestValues(50, 3500)" class="p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-left">
+            <p class="text-xs text-gray-500">Mức 50 kWh</p>
+            <p class="text-sm font-bold text-blue-700">175.000 ₫</p>
+          </button>
+          <button onclick="setTestValues(100, 3500)" class="p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-left">
+            <p class="text-xs text-gray-500">Mức 100 kWh</p>
+            <p class="text-sm font-bold text-blue-700">350.000 ₫</p>
+          </button>
+          <button onclick="setTestValues(200, 3500)" class="p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 text-left">
+            <p class="text-xs text-gray-500">Mức 200 kWh</p>
+            <p class="text-sm font-bold text-blue-700">700.000 ₫</p>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 3: TẠO MÃ VIETQR QUICKLINK (CHỈ HIỂN THỊ CHO NGƯỜI THUÊ) -->
+    <!-- ===================================================================== -->
+    <div id="tab-vietqr" class="tab-content hidden space-y-6">
+      <!-- Bộ chọn vai trò -->
+      <div class="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <span class="text-sm font-bold text-gray-800">Kiểm tra phân quyền hiển thị VietQR:</span>
+          <p class="text-xs text-gray-500">VietQR chỉ hiển thị cho Người thuê để thanh toán; các vai trò khác (Chủ trọ, Quản lý) sẽ ẩn.</p>
+        </div>
+        <div class="flex gap-2">
+          <button type="button" onclick="setVaiTroQR('nguoi_thue')" id="btn-qr-nguoi-thue" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm transition-colors">
+            👤 Người thuê (Hiện VietQR)
+          </button>
+          <button type="button" onclick="setVaiTroQR('chu_tro')" id="btn-qr-chu-tro" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
+            🔑 Chủ trọ (Ẩn VietQR)
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Tuỳ chỉnh tham số VietQR -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm space-y-4">
+          <h3 class="text-base font-bold text-gray-800 border-b pb-3">⚙️ Thông tin tài khoản nhận tiền</h3>
+          
+          <div class="space-y-3 text-sm">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Mã ngân hàng (BIN / Bank ID)</label>
+              <input type="text" id="qr-bin" value="MB" oninput="capNhatVietQR()" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Số tài khoản</label>
+              <input type="text" id="qr-stk" value="132465798" oninput="capNhatVietQR()" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Tên chủ tài khoản</label>
+              <input type="text" id="qr-name" value="LE TRUNG TIN" oninput="capNhatVietQR()" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Số phòng</label>
+                <input type="text" id="qr-phong" value="P101" oninput="capNhatVietQR()" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase font-mono">
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-gray-600 mb-1">Tháng / Năm</label>
+                <input type="text" id="qr-thang" value="11/2026" oninput="capNhatVietQR()" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Số tiền thanh toán (VNĐ)</label>
+              <input type="number" id="qr-amount" value="4402500" step="1000" oninput="capNhatVietQR()" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono font-bold text-blue-700">
+            </div>
+          </div>
+        </div>
+
+        <!-- Khung Card VietQR (Có điều kiện theo vai trò) -->
+        <div id="qr-box-nguoi-thue" class="rounded-xl border border-blue-200 bg-white shadow-sm overflow-hidden flex flex-col">
+          <div class="bg-gradient-to-r from-blue-700 via-blue-600 to-indigo-600 px-5 py-4 text-white">
+            <div class="flex items-center justify-between">
+              <p class="text-xs font-semibold uppercase tracking-wider text-blue-100">⚡ VietQR QuickLink (Dành cho Người thuê)</p>
+              <span class="text-[11px] bg-white/20 px-2 py-0.5 rounded-full">Chuẩn QuickLink mới</span>
+            </div>
+            <p id="qr-display-amount" class="mt-1.5 text-2xl font-black">4.402.500 ₫</p>
+            <p id="qr-display-desc" class="text-xs text-blue-100 mt-0.5">Phòng P101 · Tháng 11/2026</p>
+          </div>
+
+          <div class="p-5 space-y-4 flex-1 flex flex-col justify-between">
+            <!-- Mã QR Image -->
+            <div class="flex flex-col items-center justify-center p-3 bg-gray-50 rounded-xl border border-gray-100">
+              <img id="qr-img" src="https://img.vietqr.io/image/MB-132465798-compact2.png?amount=4402500&addInfo=PHONGP101%20T11&accountName=LE%20TRUNG%20TIN" alt="Mã VietQR" class="h-60 w-auto rounded-lg border border-gray-200 bg-white shadow-sm p-1">
+              <a id="qr-download-link" href="#" target="_blank" class="text-xs text-blue-600 hover:text-blue-800 font-medium mt-2 flex items-center gap-1">
+                <span>📥</span> Tải ảnh mã QR
+              </a>
+            </div>
+
+            <!-- Nội dung chuyển khoản -->
+            <div class="rounded-xl bg-amber-50 border border-amber-200 p-3 space-y-1">
+              <p class="text-xs font-semibold text-amber-800">Cú pháp chuyển khoản chuẩn:</p>
+              <div class="flex items-center justify-between gap-2 bg-white rounded-lg p-2 border border-amber-200">
+                <code id="qr-memo-code" class="text-sm font-black text-amber-950 font-mono tracking-wide">PHONGP101 T11</code>
+                <button type="button" onclick="chepText('qr-memo-code')" class="shrink-0 rounded bg-amber-500 px-2.5 py-1 text-xs font-bold text-white hover:bg-amber-600">
+                  Sao chép
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Khung khi là Chủ trọ (Ẩn VietQR) -->
+        <div id="qr-box-chu-tro" class="hidden rounded-xl border border-gray-200 bg-gray-50 p-8 shadow-sm flex flex-col items-center justify-center text-center space-y-3">
+          <div class="w-16 h-16 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-2xl">
+            🔒
+          </div>
+          <div>
+            <h4 class="text-base font-bold text-gray-800">Không hiển thị VietQR cho Chủ trọ</h4>
+            <p class="text-xs text-gray-500 mt-1 max-w-xs">
+              Mã VietQR QuickLink thanh toán chỉ tích hợp hiển thị bên trang của <strong>Người thuê</strong> để quét mã thanh toán. Phía Chủ trọ / Quản lý chỉ xem thông tin đối soát và duyệt UNC.
+            </p>
+          </div>
+          <button type="button" onclick="setVaiTroQR('nguoi_thue')" class="text-xs font-semibold text-blue-600 hover:underline">
+            ← Chuyển lại sang vai trò Người thuê để xem VietQR
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- TAB 4: XÁC NHẬN CHUYỂN KHOẢN UNC (NGƯỜI THUÊ & CHỦ TRỌ) -->
+    <!-- ===================================================================== -->
+    <div id="tab-unc" class="tab-content hidden space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Phía Người Thuê: Form gửi biên lai UNC -->
+        <div class="bg-white rounded-xl border border-gray-200 p-5 shadow-sm space-y-4">
+          <div class="border-b pb-3">
+            <h3 class="text-base font-bold text-gray-800 flex items-center gap-2">
+              <span>🧾</span> Phía Người Thuê: Gửi UNC
+            </h3>
+            <p class="text-xs text-gray-500">Phòng P101 · Hóa đơn tháng 11/2026</p>
+          </div>
+
+          <div class="rounded-lg bg-gray-50 p-3 flex justify-between items-center text-sm">
+            <span class="text-gray-600">Cần thanh toán:</span>
+            <span class="font-bold text-blue-700">4.402.500 ₫</span>
+          </div>
+
+          <div class="space-y-3 text-sm">
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Số tiền đã chuyển (VNĐ) <span class="text-red-500">*</span></label>
+              <input type="number" id="unc-so-tien" value="4402500" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Mã bút toán / FT ngân hàng</label>
+              <input type="text" id="unc-ma-ft" value="FT2611059981" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm font-mono">
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-gray-700 mb-1">Ảnh biên lai chuyển khoản UNC <span class="text-red-500">*</span></label>
+              <input type="file" id="unc-file" accept="image/*" onchange="previewAnh(this, 'unc-img-preview', 'unc-preview-box')" class="block w-full text-xs text-gray-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100 cursor-pointer">
+              
+              <div id="unc-preview-box" class="mt-2 relative inline-block">
+                <img id="unc-img-preview" src="https://placehold.co/400x600/e2e8f0/1e293b.png?text=Bien+Lai+UNC+Chuyen+Khoan" alt="Biên lai UNC" class="h-40 w-auto rounded-lg border border-gray-300 object-contain shadow-sm">
+              </div>
+            </div>
+
+            <button type="button" onclick="guiBienLaiUNC()" class="w-full rounded-lg bg-green-600 py-2.5 text-sm font-semibold text-white hover:bg-green-700 shadow-sm transition-colors">
+              Gửi biên lai xác nhận UNC
+            </button>
+          </div>
+        </div>
+
+        <!-- Phía Chủ Trọ: Duyệt / Đối Soát UNC -->
+        <div class="bg-yellow-50/50 rounded-xl border border-yellow-200 p-5 shadow-sm space-y-4">
+          <div class="border-b border-yellow-200 pb-3 flex items-center justify-between">
+            <div>
+              <h3 class="text-base font-bold text-gray-900 flex items-center gap-2">
+                <span>🛡️</span> Phía Chủ Trọ: Duyệt UNC
+              </h3>
+              <p class="text-xs text-gray-600">Đối soát và xác nhận giao dịch</p>
+            </div>
+            <span id="unc-badge-status" class="rounded-full bg-yellow-100 border border-yellow-300 px-3 py-1 text-xs font-semibold text-yellow-800">
+              Chờ xác nhận
+            </span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div class="bg-white p-2.5 rounded-lg border border-gray-200">
+              <span class="text-gray-500">Cần thanh toán:</span>
+              <p class="font-bold text-gray-800 text-sm">4.402.500 ₫</p>
+            </div>
+            <div class="bg-white p-2.5 rounded-lg border border-gray-200">
+              <span class="text-gray-500">Thực nhận:</span>
+              <p id="duyet-so-tien" class="font-bold text-green-700 text-sm">4.402.500 ₫</p>
+            </div>
+          </div>
+
+          <div class="bg-white p-3 rounded-lg border border-gray-200 text-xs space-y-1">
+            <div class="flex justify-between">
+              <span class="text-gray-500">Mã giao dịch:</span>
+              <span id="duyet-ma-ft" class="font-mono font-bold text-gray-800">FT2611059981</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-500">Thời gian:</span>
+              <span id="duyet-thoi-gian">Vừa xong</span>
+            </div>
+          </div>
+
+          <div>
+            <p class="text-xs font-medium text-gray-700 mb-1">Ảnh biên lai UNC người thuê đính kèm:</p>
+            <img id="duyet-img" src="https://placehold.co/400x600/e2e8f0/1e293b.png?text=Bien+Lai+UNC+Chuyen+Khoan" alt="Biên lai đối soát" class="h-36 w-auto rounded-lg border border-gray-300 object-contain shadow-sm cursor-pointer hover:opacity-95" onclick="phongToAnh(this.src)">
+          </div>
+
+          <div class="flex gap-2 pt-2">
+            <button type="button" onclick="duyetUNC(true)" class="flex-1 rounded-lg bg-green-600 py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-green-700 shadow-sm transition-colors">
+              ✓ Xác nhận chuyển khoản UNC
+            </button>
+            <button type="button" onclick="duyetUNC(false)" class="rounded-lg border border-red-300 bg-white px-3.5 py-2.5 text-xs sm:text-sm font-medium text-red-700 hover:bg-red-50 transition-colors">
+              Từ chối
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal Lightbox phóng to ảnh -->
+  <div id="img-modal" class="hidden fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onclick="dongModalAnh()">
+    <div class="relative max-h-[90vh] max-w-[90vw]">
+      <img id="modal-img" src="" alt="Ảnh phóng to" class="max-h-[85vh] max-w-full rounded-lg object-contain">
+      <button class="absolute -top-3 -right-3 rounded-full bg-white text-gray-800 w-8 h-8 flex items-center justify-center font-bold shadow-lg">✕</button>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT THUẦN -->
+  <script>
+    function formatVND(n) {
+      return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(n || 0);
+    }
+
+    // Công thức tính tiền điện theo mặt bằng
+    function tinhTienDienMatBang(cu, moi, donGia = 3500) {
+      const soTieuThu = Math.max(0, moi - cu);
+      const thanhTien = Math.round(soTieuThu * donGia);
+      return { soTieuThu, donGia, thanhTien };
+    }
+
+    function chuyenTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+      document.getElementById('tab-' + tabId).classList.remove('hidden');
+      document.getElementById('btn-tab-' + tabId).classList.add('active');
+    }
+
+    function hienToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = '✅ ' + msg;
+      t.classList.remove('hidden');
+      setTimeout(() => t.classList.add('hidden'), 4000);
+    }
+
+    // Tab 1 Logic
+    function tinhToanDienForm() {
+      const cu = Number(document.getElementById('dien-cu').value);
+      const moi = Number(document.getElementById('dien-moi').value);
+      const donGia = Number(document.getElementById('dien-don-gia').value) || 3500;
+      const loi = document.getElementById('dien-loi');
+      if (moi < cu) {
+        loi.classList.remove('hidden');
+        return;
+      }
+      loi.classList.add('hidden');
+      const kq = tinhTienDienMatBang(cu, moi, donGia);
+      document.getElementById('dien-kwh-tieu-thu').textContent = kq.soTieuThu + ' kWh';
+      document.getElementById('dien-thanh-tien').textContent = formatVND(kq.thanhTien);
+      document.getElementById('dien-ghi-chu-ct').textContent = `* ${kq.soTieuThu} kWh × ${donGia.toLocaleString('vi-VN')} đ = ${formatVND(kq.thanhTien)}`;
+    }
+
+    function tinhToanNuocForm() {
+      const cu = Number(document.getElementById('nuoc-cu').value);
+      const moi = Number(document.getElementById('nuoc-moi').value);
+      const donGia = Number(document.getElementById('nuoc-don-gia').value) || 20000;
+      const loi = document.getElementById('nuoc-loi');
+      if (moi < cu) {
+        loi.classList.remove('hidden');
+        return;
+      }
+      loi.classList.add('hidden');
+      const m3 = Math.max(0, moi - cu);
+      const tien = Math.round(m3 * donGia);
+      document.getElementById('nuoc-m3-tieu-thu').textContent = m3 + ' m³';
+      document.getElementById('nuoc-thanh-tien').textContent = formatVND(tien);
+      document.getElementById('nuoc-ghi-chu-ct').textContent = `* ${m3} m³ × ${donGia.toLocaleString('vi-VN')} đ = ${formatVND(tien)}`;
+    }
+
+    function previewAnh(input, imgId, boxId) {
+      const file = input.files?.[0];
+      if (file) {
+        document.getElementById(imgId).src = URL.createObjectURL(file);
+        document.getElementById(boxId).classList.remove('hidden');
+      }
+    }
+
+    function xoaAnh(fileInputId, boxId) {
+      document.getElementById(fileInputId).value = '';
+      document.getElementById(boxId).classList.add('hidden');
+    }
+
+    function luuChiSo(loai) {
+      hienToast('Đã lưu chỉ số công tơ ' + loai + ' thành công theo đơn giá mặt bằng!');
+    }
+
+    // Tab 2 Logic: Cập nhật công thức mặt bằng
+    function capNhatMatBang() {
+      const kwh = Math.max(0, Number(document.getElementById('test-kwh').value) || 0);
+      const price = Math.max(0, Number(document.getElementById('test-price').value) || 0);
+      const tien = Math.round(kwh * price);
+
+      document.getElementById('cong-thuc-text').textContent = `${kwh} kWh × ${price.toLocaleString('vi-VN')} ₫`;
+      document.getElementById('tong-tien-mat-bang').textContent = formatVND(tien);
+    }
+
+    function setTestValues(kwh, price) {
+      document.getElementById('test-kwh').value = kwh;
+      document.getElementById('test-price').value = price;
+      capNhatMatBang();
+    }
+
+    // Toggle phân quyền vai trò cho VietQR
+    function setVaiTroQR(vaiTro) {
+      const boxNguoiThue = document.getElementById('qr-box-nguoi-thue');
+      const boxChuTro = document.getElementById('qr-box-chu-tro');
+      const btnNT = document.getElementById('btn-qr-nguoi-thue');
+      const btnCT = document.getElementById('btn-qr-chu-tro');
+
+      if (vaiTro === 'nguoi_thue') {
+        boxNguoiThue.classList.remove('hidden');
+        boxChuTro.classList.add('hidden');
+        btnNT.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white shadow-sm transition-colors';
+        btnCT.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors';
+        hienToast('Đã chuyển sang vai trò Người thuê: Thẻ VietQR QuickLink hiển thị để quét thanh toán.');
+      } else {
+        boxNguoiThue.classList.add('hidden');
+        boxChuTro.classList.remove('hidden');
+        btnCT.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-purple-600 text-white shadow-sm transition-colors';
+        btnNT.className = 'px-3 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors';
+        hienToast('Đã chuyển sang vai trò Chủ trọ: Mã VietQR đã được ẩn.');
+      }
+    }
+
+    // Tab 3 Logic: VietQR QuickLink
+    function capNhatVietQR() {
+      const bin = (document.getElementById('qr-bin').value || 'MB').trim();
+      const stk = (document.getElementById('qr-stk').value || '132465798').trim();
+      const name = (document.getElementById('qr-name').value || '').trim();
+      const phong = (document.getElementById('qr-phong').value || 'P101').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      const rawThang = document.getElementById('qr-thang').value || '11/2026';
+      const thang = parseInt(rawThang.split('/')[0] || rawThang, 10) || 11;
+      const amount = Math.round(Number(document.getElementById('qr-amount').value) || 0);
+
+      const phongClean = phong.startsWith('PHONG') ? phong.replace(/^PHONG/, '') : phong;
+      const noiDung = 'PHONG' + phongClean + ' T' + thang;
+
+      const params = new URLSearchParams();
+      if (amount > 0) params.set('amount', String(amount));
+      params.set('addInfo', noiDung);
+      if (name) params.set('accountName', name);
+
+      const qrUrl = `https://img.vietqr.io/image/${bin}-${stk}-compact2.png?${params.toString()}`;
+
+      document.getElementById('qr-img').src = qrUrl;
+      document.getElementById('qr-display-amount').textContent = formatVND(amount);
+      document.getElementById('qr-display-desc').textContent = `Phòng ${phong} · Tháng ${rawThang}`;
+      document.getElementById('qr-memo-code').textContent = noiDung;
+      document.getElementById('qr-download-link').href = qrUrl;
+    }
+
+    function chepText(id) {
+      const text = document.getElementById(id).textContent;
+      navigator.clipboard.writeText(text);
+      hienToast('Đã sao chép nội dung: "' + text + '" vào bộ nhớ tạm!');
+    }
+
+    // Tab 4 Logic: UNC
+    function guiBienLaiUNC() {
+      const soTien = Number(document.getElementById('unc-so-tien').value);
+      const maFT = document.getElementById('unc-ma-ft').value;
+      const imgPreview = document.getElementById('unc-img-preview').src;
+
+      document.getElementById('duyet-so-tien').textContent = formatVND(soTien);
+      document.getElementById('duyet-ma-ft').textContent = maFT || 'Không có';
+      document.getElementById('duyet-thoi-gian').textContent = new Date().toLocaleTimeString('vi-VN');
+      document.getElementById('duyet-img').src = imgPreview;
+
+      const badge = document.getElementById('unc-badge-status');
+      badge.textContent = 'Chờ xác nhận';
+      badge.className = 'rounded-full bg-yellow-100 border border-yellow-300 px-3 py-1 text-xs font-semibold text-yellow-800';
+
+      hienToast('Người thuê đã gửi biên lai UNC thành công! Bên chủ trọ đã nhận được dữ liệu để duyệt.');
+    }
+
+    function duyetUNC(chapNhan) {
+      const badge = document.getElementById('unc-badge-status');
+      if (chapNhan) {
+        badge.textContent = 'Đã xác nhận';
+        badge.className = 'rounded-full bg-green-100 border border-green-300 px-3 py-1 text-xs font-semibold text-green-800';
+        hienToast('Chủ trọ đã XÁC NHẬN (Duyệt) chuyển khoản UNC thành công!');
+      } else {
+        const lyDo = prompt('Nhập lý do từ chối biên lai UNC:', 'Ảnh chụp mờ hoặc tiền chưa vào tài khoản');
+        if (lyDo) {
+          badge.textContent = 'Từ chối: ' + lyDo;
+          badge.className = 'rounded-full bg-red-100 border border-red-300 px-3 py-1 text-xs font-semibold text-red-800';
+          hienToast('Đã từ chối biên lai UNC. Lý do: ' + lyDo);
+        }
+      }
+    }
+
+    function phongToAnh(url) {
+      document.getElementById('modal-img').src = url;
+      document.getElementById('img-modal').classList.remove('hidden');
+    }
+
+    function dongModalAnh() {
+      document.getElementById('img-modal').classList.add('hidden');
+    }
+
+    // Khởi tạo ban đầu
+    capNhatMatBang();
+    capNhatVietQR();
+  </script>
+</body>
+</html>
