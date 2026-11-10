@@ -8,8 +8,8 @@ Quản lý xem báo cáo trong các khu được phân công, kiểm tra thực 
 |---|---|
 | Người thuê | Gửi báo cáo kèm ảnh; xem sự cố của phòng và lịch sử; sửa nội dung hoặc hủy báo cáo của mình khi còn chờ tiếp nhận |
 | Quản lý | Xem, cập nhật trạng thái, ghi chú và chi phí trong khu được gán qua `nhan_su_khu_tro` |
-| Chủ trọ | Xem và can thiệp đối với sự cố thuộc khu mình sở hữu |
-| Quản trị | Xem và can thiệp đối với sự cố trong các khu của hệ thống |
+| Chủ trọ | Quyền cao nhất: xem, giám sát và can thiệp sự cố toàn hệ thống |
+| Quản trị | Chỉ xem sự cố; quản trị hệ thống dưới quyền chủ trọ, không xử lý complain |
 
 Người thuê không được tự đánh dấu đã xử lý, điền ghi chú xử lý hoặc thay đổi chi phí. Người quản lý không xem hay xử lý được sự cố ở khu chưa được phân công. RLS và trigger kiểm tra cả khi gọi RPC lẫn cập nhật bảng trực tiếp.
 
@@ -70,7 +70,7 @@ Các nhãn và danh sách trạng thái còn mở có sẵn tại `frontend/src/
 
 ## Cập nhật database
 
-Nếu database đã áp dụng 001–005, chạy file `backend/migrations/006_quy_trinh_xu_ly_su_co.sql` trong Supabase SQL Editor. Migration bổ sung cột, trạng thái, thay hàm/trigger/view liên quan, sửa đường dẫn thông báo cũ (`/su_co/` → `/issues/`); giữ dữ liệu cũ. File chạy lại được nhiều lần. Nếu local đã chạy bản 006 cũ, chạy lại file 006 mới này (hoặc `supabase db reset`).
+Database local đã có: xem [hướng dẫn reset](phan-quyen.md#áp-dụng).
 
 Database mới áp dụng lần lượt 001–006, sau đó seed như hướng dẫn trong `backend/README.md`. Nếu dùng Supabase CLI, cập nhật bản copy/liên kết trong `backend/supabase/migrations` trước khi áp dụng migration.
 

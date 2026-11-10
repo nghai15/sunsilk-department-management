@@ -16,20 +16,24 @@ FROM (VALUES
   ('c1eebc99-9c0b-4ef8-bb6d-6bb9bd380a31', '84901234567', 'Nguyễn Văn Chủ Nhà'),
   ('c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32', '84987654321', 'Trần Thị Thuê'),
   ('c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', '84976543210', 'Lê Văn Khách'),
-  ('c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34', '84911111111', 'Phạm Thị Quản Lý')
+  ('c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34', '84911111111', 'Phạm Thị Quản Lý'),
+  ('c5eebc99-9c0b-4ef8-bb6d-6bb9bd380a35', '84922222222', 'Trần Quản Trị')
 ) AS v(id, so_dien_thoai, ho_ten)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO auth.identities (user_id, provider_id, identity_data, provider, last_sign_in_at)
-SELECT id, phone, jsonb_build_object('sub', id::text, 'phone', phone, 'phone_verified', true), 'phone', NOW()
+-- created_at/updated_at bắt buộc có giá trị: nếu để NULL, GoTrue báo 500 "Database error querying schema" khi đăng nhập
+INSERT INTO auth.identities (user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+SELECT id, phone, jsonb_build_object('sub', id::text, 'phone', phone, 'phone_verified', true), 'phone', NOW(), NOW(), NOW()
 FROM auth.users WHERE id IN ('c1eebc99-9c0b-4ef8-bb6d-6bb9bd380a31','c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32',
-                             'c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33','c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34')
+                             'c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33','c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34',
+                             'c5eebc99-9c0b-4ef8-bb6d-6bb9bd380a35')
   AND NOT EXISTS (SELECT 1 FROM auth.identities i WHERE i.user_id = auth.users.id);
 
 UPDATE nguoi_dung SET vai_tro = 'chu_tro', cccd = '079090001122' WHERE id = 'c1eebc99-9c0b-4ef8-bb6d-6bb9bd380a31';
 UPDATE nguoi_dung SET cccd = '079092003344' WHERE id = 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32';
 UPDATE nguoi_dung SET cccd = '079095005566' WHERE id = 'c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33';
 UPDATE nguoi_dung SET vai_tro = 'quan_ly' WHERE id = 'c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34';
+UPDATE nguoi_dung SET vai_tro = 'quan_tri' WHERE id = 'c5eebc99-9c0b-4ef8-bb6d-6bb9bd380a35';
 
 -- 2. Khu trọ (kèm tài khoản nhận tiền để sinh VietQR: 970436 = Vietcombank)
 INSERT INTO khu_tro (id, ten, dia_chi, so_tang, don_gia_dien, don_gia_nuoc, phi_internet,
@@ -133,3 +137,14 @@ INSERT INTO su_co (phong_id, nguoi_thue_id, tieu_de, mo_ta, phan_loai, trang_tha
 SELECT 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32',
        'Máy lạnh không mát', 'Bật máy lạnh 30 phút vẫn không mát, có tiếng kêu lạ.', 'may_lanh', 'cho_tiep_nhan'
 WHERE NOT EXISTS (SELECT 1 FROM su_co);
+
+UPDATE auth.users SET
+  confirmation_token = COALESCE(confirmation_token, ''),
+  recovery_token = COALESCE(recovery_token, ''),
+  email_change_token_new = COALESCE(email_change_token_new, ''),
+  email_change = COALESCE(email_change, ''),
+  email_change_token_current = COALESCE(email_change_token_current, ''),
+  phone_change = COALESCE(phone_change, ''),
+  phone_change_token = COALESCE(phone_change_token, ''),
+  reauthentication_token = COALESCE(reauthentication_token, '')
+WHERE id::text LIKE 'c_eebc99-%';

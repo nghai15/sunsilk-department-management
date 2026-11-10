@@ -7,7 +7,7 @@ COMMENT ON COLUMN nguoi_dung.id IS 'Mã người dùng = id tài khoản Supabas
 COMMENT ON COLUMN nguoi_dung.so_dien_thoai IS 'Số điện thoại dạng 0901234567 (dùng để đăng nhập)';
 COMMENT ON COLUMN nguoi_dung.ho_ten IS 'Họ và tên';
 COMMENT ON COLUMN nguoi_dung.cccd IS 'Số căn cước công dân';
-COMMENT ON COLUMN nguoi_dung.vai_tro IS 'quan_tri | chu_tro | quan_ly | nguoi_thue (mặc định nguoi_thue, chỉ quản trị mới đổi được)';
+COMMENT ON COLUMN nguoi_dung.vai_tro IS 'chu_tro > quan_tri > quan_ly > nguoi_thue (mặc định). Chủ trọ quản lý mọi role; quản trị chỉ quản lý tài khoản cấp dưới.';
 COMMENT ON COLUMN nguoi_dung.anh_dai_dien IS 'Đường dẫn ảnh đại diện';
 COMMENT ON COLUMN nguoi_dung.dang_hoat_dong IS 'false = khóa tài khoản';
 COMMENT ON COLUMN nguoi_dung.tao_luc IS 'Thời điểm tạo';

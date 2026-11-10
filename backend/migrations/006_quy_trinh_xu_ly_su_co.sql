@@ -1,9 +1,4 @@
--- Migration 006: quản lý xử lý sự cố trong khu được phân công.
--- Áp dụng sau 001–005; giữ nguyên giá trị hoan_tat để tương thích dữ liệu cũ.
--- Gồm 2 phần: A. quy trình xử lý sự cố; B. vá phân quyền và đối soát thanh toán (cuối file).
--- Gồm cả: đường dẫn thông báo khớp route frontend (/issues/<id>, /notifications),
--- báo chủ trọ/quản lý khi có sự cố mới và khi đổi trạng thái, quy tắc ghi chú rõ ràng
--- (NULL = giữ ghi chú nếu không đổi trạng thái, rỗng = xóa). An toàn khi chạy lại.
+-- Quy trình xử lý sự cố và đối soát thanh toán.
 BEGIN;
 
 -- Sửa đường dẫn của thông báo đã tạo trước đó (nếu có)
@@ -52,8 +47,6 @@ ALTER TABLE public.su_co ADD CONSTRAINT su_co_chua_the_xu_ly_ly_do_check
 ALTER TABLE public.lich_su_su_co ADD COLUMN IF NOT EXISTS chi_phi_sua_chua DECIMAL(12, 2);
 
 -- Bảo vệ ghi chú/chi phí/thời điểm hoàn tất cả khi INSERT lẫn UPDATE trực tiếp.
--- RLS 004 tiếp tục giới hạn nhân sự theo khu và chỉ cho người thuê hủy báo cáo
--- của mình khi còn chờ tiếp nhận.
 CREATE OR REPLACE FUNCTION public.su_co_bao_ve_cot() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE v_phong_id uuid;
@@ -62,7 +55,7 @@ BEGIN
   ELSE v_phong_id := OLD.phong_id;
   END IF;
 
-  IF auth.uid() IS NOT NULL AND NOT public.la_nhan_su_phong(v_phong_id) THEN
+  IF auth.uid() IS NOT NULL AND NOT public.co_the_xu_ly_su_co(v_phong_id) THEN
     IF TG_OP = 'INSERT' THEN
       IF COALESCE(NEW.chi_phi_sua_chua, 0) <> 0
          OR NULLIF(btrim(NEW.ghi_chu_xu_ly, E' \t\n\r\f'), '') IS NOT NULL
@@ -114,7 +107,7 @@ BEGIN
       (su_co_id, tu_trang_thai, den_trang_thai, ghi_chu, chi_phi_sua_chua, nguoi_thuc_hien_id)
     VALUES (NEW.id, NULL, NEW.trang_thai, NEW.ghi_chu_xu_ly, NEW.chi_phi_sua_chua, auth.uid());
     -- Không báo lại cho chính người vừa tạo báo cáo (vd quản lý tự báo)
-    PERFORM gui_thong_bao(array_remove(ds_nhan_su_khu_tro(r.khu_tro_id), auth.uid()), 'su_co',
+    PERFORM gui_thong_bao(array_remove(ds_nguoi_xu_ly_su_co(r.khu_tro_id), auth.uid()), 'su_co',
       'Phòng ' || r.so_phong || ' báo sự cố', NEW.tieu_de,
       '/issues/' || NEW.id, jsonb_build_object('su_co_id', NEW.id));
   ELSE
@@ -146,7 +139,7 @@ BEGIN
           jsonb_build_object('su_co_id', NEW.id, 'trang_thai', NEW.trang_thai));
       END IF;
       PERFORM gui_thong_bao(
-        array_remove(array_remove(ds_nhan_su_khu_tro(r.khu_tro_id), auth.uid()), NEW.nguoi_thue_id),
+        array_remove(array_remove(ds_nguoi_xu_ly_su_co(r.khu_tro_id), auth.uid()), NEW.nguoi_thue_id),
         'su_co', 'Phòng ' || r.so_phong || ' - sự cố: ' || v_label, v_noi_dung,
         '/issues/' || NEW.id,
         jsonb_build_object('su_co_id', NEW.id, 'trang_thai', NEW.trang_thai));
@@ -156,7 +149,7 @@ BEGIN
 END $$;
 
 -- API cho màn hình xử lý sự cố. SECURITY INVOKER: vẫn chịu RLS 004.
--- Chủ trọ/quản trị có quyền giám sát và can thiệp theo phạm vi hiện có.
+-- Chủ trọ giám sát/can thiệp; quản trị chỉ xem.
 CREATE OR REPLACE FUNCTION public.cap_nhat_xu_ly_su_co(
   p_su_co_id uuid,
   p_trang_thai text,
@@ -167,7 +160,7 @@ LANGUAGE plpgsql SET search_path = public AS $$
 DECLARE v_su_co public.su_co; v_ghi_chu text;
 BEGIN
   SELECT * INTO v_su_co FROM public.su_co WHERE id = p_su_co_id FOR UPDATE;
-  IF NOT FOUND OR auth.uid() IS NULL OR NOT public.la_nhan_su_phong(v_su_co.phong_id) THEN
+  IF NOT FOUND OR auth.uid() IS NULL OR NOT public.co_the_xu_ly_su_co(v_su_co.phong_id) THEN
     RAISE EXCEPTION 'Không có quyền xử lý sự cố này' USING ERRCODE = '42501';
   END IF;
   IF p_trang_thai IS NULL OR p_trang_thai NOT IN ('dang_xu_ly', 'chua_the_xu_ly', 'hoan_tat', 'da_huy') THEN
@@ -270,34 +263,17 @@ COMMENT ON FUNCTION public.cap_nhat_xu_ly_su_co(uuid, text, text, numeric) IS
   'Nhân sự cập nhật trạng thái, ghi chú, chi phí sự cố trong khu có quyền. Ghi chú NULL = giữ cũ (nếu không đổi trạng thái), rỗng = xóa. Tự ghi lịch sử và thông báo.';
 
 
--- ---------------------------------------------------------------------
--- 1. Bảo vệ cột nhạy cảm của nguoi_dung (an toàn với NULL)
--- ---------------------------------------------------------------------
-CREATE OR REPLACE FUNCTION public.nguoi_dung_bao_ve_cot() RETURNS trigger
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-BEGIN
-  IF auth.uid() IS NOT NULL AND COALESCE(public.vai_tro_hien_tai(), '') <> 'quan_tri'
-     AND (NEW.vai_tro IS DISTINCT FROM OLD.vai_tro OR NEW.dang_hoat_dong IS DISTINCT FROM OLD.dang_hoat_dong
-          OR NEW.so_dien_thoai IS DISTINCT FROM OLD.so_dien_thoai) THEN
-    RAISE EXCEPTION 'Không được tự đổi vai trò/trạng thái/số điện thoại' USING ERRCODE = '42501';
-  END IF;
-  RETURN NEW;
-END $$;
-
--- ---------------------------------------------------------------------
--- 2. Chỉ quản trị hoặc chủ trọ hiện tại được chuyển quyền chủ khu
--- ---------------------------------------------------------------------
+-- 1. Chỉ chủ trọ được chuyển quyền chủ khu
 CREATE OR REPLACE FUNCTION public.khu_tro_bao_ve_chu_so_huu() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
   IF NEW.chu_tro_id IS DISTINCT FROM OLD.chu_tro_id AND auth.uid() IS NOT NULL THEN
-    IF NOT (COALESCE(public.vai_tro_hien_tai(), '') = 'quan_tri'
-            OR (public.vai_tro_hien_tai() = 'chu_tro' AND OLD.chu_tro_id = auth.uid())) THEN
-      RAISE EXCEPTION 'Chỉ quản trị hoặc chủ trọ hiện tại mới được đổi chủ khu trọ' USING ERRCODE = '42501';
+    IF COALESCE(public.vai_tro_hien_tai(), '') <> 'chu_tro' THEN
+      RAISE EXCEPTION 'Chỉ chủ trọ được chuyển quyền sở hữu khu' USING ERRCODE = '42501';
     END IF;
     IF NEW.chu_tro_id IS NOT NULL AND NOT EXISTS (
-         SELECT 1 FROM public.nguoi_dung WHERE id = NEW.chu_tro_id AND vai_tro = 'chu_tro' AND dang_hoat_dong) THEN
-      RAISE EXCEPTION 'Chủ khu mới phải là tài khoản chủ trọ đang hoạt động' USING ERRCODE = '22023';
+      SELECT 1 FROM public.nguoi_dung WHERE id = NEW.chu_tro_id AND vai_tro = 'chu_tro' AND dang_hoat_dong) THEN
+      RAISE EXCEPTION 'Chủ khu mới phải là chủ trọ đang hoạt động' USING ERRCODE = '22023';
     END IF;
   END IF;
   RETURN NEW;
@@ -306,9 +282,7 @@ DROP TRIGGER IF EXISTS trg_khu_tro_bao_ve_chu ON public.khu_tro;
 CREATE TRIGGER trg_khu_tro_bao_ve_chu BEFORE UPDATE ON public.khu_tro
   FOR EACH ROW EXECUTE FUNCTION public.khu_tro_bao_ve_chu_so_huu();
 
--- ---------------------------------------------------------------------
--- 3. Đồng bộ trạng thái hóa đơn với các khoản thanh toán
--- ---------------------------------------------------------------------
+-- 2. Đồng bộ trạng thái hóa đơn với các khoản thanh toán
 CREATE OR REPLACE FUNCTION public.dong_bo_trang_thai_hoa_don(p_hoa_don_id uuid) RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE b public.hoa_don; v_paid numeric; v_new text;

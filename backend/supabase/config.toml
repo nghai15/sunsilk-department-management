@@ -7,7 +7,7 @@ site_url = "http://localhost:5173"
 
 [auth.sms]
 # Đăng nhập SĐT + mật khẩu; tài khoản do chủ trọ tạo nên không cần xác thực OTP
-enable_signup = false
+enable_signup = true
 enable_confirmations = false
 
 [db.seed]
@@ -25,3 +25,9 @@ entrypoint = "../functions/cron-reminders/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "../functions/send-webpush/index.ts"
+
+[auth.sms.twilio]
+enabled = true
+account_sid = "dummy"
+message_service_sid = "dummy"
+auth_token = "dummy"
