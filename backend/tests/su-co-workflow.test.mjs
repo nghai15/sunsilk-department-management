@@ -55,6 +55,8 @@ before(async () => {
     );
     CREATE TABLE storage.objects (id uuid PRIMARY KEY DEFAULT gen_random_uuid(), bucket_id text, name text);
     ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+    GRANT USAGE ON SCHEMA storage TO authenticated;
+    GRANT SELECT, INSERT, UPDATE, DELETE ON storage.objects TO authenticated;
     CREATE FUNCTION storage.foldername(text) RETURNS text[] LANGUAGE sql IMMUTABLE AS $$
       SELECT (string_to_array($1, '/'))[1:array_length(string_to_array($1, '/'), 1) - 1]
     $$;
@@ -234,12 +236,106 @@ test('dashboard và danh sách phòng tính chưa thể xử lý là sự cố c
   });
 });
 
-test('chủ trọ và quản trị vẫn xem và can thiệp theo phạm vi quyền hiện có', async () => {
+test('chủ trọ can thiệp, quản trị chỉ xem sự cố', async () => {
   for (const user of [OWNER, ADMIN]) {
     await asUser(user, async () => {
       assert.equal((await db.query('SELECT count(*)::int AS n FROM su_co')).rows[0].n, 2);
-      assert.equal((await update(ISSUE_B, 'dang_xu_ly', `Giám sát ${user}`)).trang_thai, 'dang_xu_ly');
+      if (user === OWNER) {
+        assert.equal((await update(ISSUE_B, 'dang_xu_ly', `Giám sát ${user}`)).trang_thai, 'dang_xu_ly');
+      } else {
+        await rejectsCode(update(ISSUE_B, 'hoan_tat'), '42501');
+        assert.equal((await db.query("UPDATE su_co SET trang_thai = 'hoan_tat' WHERE id = $1 RETURNING id", [ISSUE_B])).rows.length, 0);
+        assert.equal((await db.query('DELETE FROM su_co WHERE id = $1 RETURNING id', [ISSUE_B])).rows.length, 0);
+        await rejectsCode(db.query('INSERT INTO su_co (phong_id, tieu_de) VALUES ($1, $2)', [ROOM_A, 'Không được tạo']), '42501');
+      }
     });
+  }
+});
+
+test('phân quyền: quản trị không tự nâng quyền, không sửa/xóa chủ trọ', async () => {
+  await asUser(ADMIN, async () => {
+    await rejectsCode(db.query("UPDATE nguoi_dung SET vai_tro = 'chu_tro' WHERE id = $1", [ADMIN]), '42501');
+    assert.equal((await db.query("UPDATE nguoi_dung SET dang_hoat_dong = false WHERE id = $1 RETURNING id", [OWNER])).rows.length, 0);
+    assert.equal((await db.query('DELETE FROM nguoi_dung WHERE id = $1 RETURNING id', [OWNER])).rows.length, 0);
+    await rejectsCode(db.query("UPDATE nguoi_dung SET vai_tro = 'quan_tri' WHERE id = $1", [MANAGER]), '42501');
+    await rejectsCode(db.query('UPDATE khu_tro SET chu_tro_id = NULL WHERE id = $1', [AREA_A]), '42501');
+  });
+});
+
+test('phân quyền: quản trị quản lý tài khoản cấp dưới và phân công khu', async () => {
+  await asUser(ADMIN, async () => {
+    await db.exec('BEGIN');
+    try {
+      assert.equal((await db.query("UPDATE nguoi_dung SET vai_tro = 'quan_ly' WHERE id = $1 RETURNING vai_tro", [TENANT_B])).rows[0].vai_tro, 'quan_ly');
+      await db.query('INSERT INTO nhan_su_khu_tro VALUES ($1, $2)', [AREA_B, MANAGER]);
+      assert.equal((await db.query('SELECT la_nhan_su_khu_tro($1) AS ok', [AREA_B])).rows[0].ok, true);
+    } finally { await db.exec('ROLLBACK'); }
+  });
+});
+
+test('phân quyền: chủ trọ có quyền cao nhất kể cả khu không đứng tên', async () => {
+  await db.exec('BEGIN');
+  try {
+    await db.query('UPDATE khu_tro SET chu_tro_id = NULL WHERE id = $1', [AREA_B]);
+    await asUser(OWNER, async () => {
+      assert.equal((await db.query('SELECT la_nhan_su_khu_tro($1) AS ok', [AREA_B])).rows[0].ok, true);
+      assert.equal((await update(ISSUE_B, 'hoan_tat')).trang_thai, 'hoan_tat');
+      assert.equal((await db.query("UPDATE nguoi_dung SET vai_tro = 'quan_ly' WHERE id = $1 RETURNING vai_tro", [ADMIN])).rows[0].vai_tro, 'quan_ly');
+    });
+  } finally { await db.exec('ROLLBACK'); }
+});
+
+test('phân quyền: quản lý/người thuê không tự nâng quyền hoặc phân công khu', async () => {
+  for (const user of [MANAGER, TENANT_A]) {
+    await asUser(user, async () => {
+      await rejectsCode(db.query("UPDATE nguoi_dung SET vai_tro = 'chu_tro' WHERE id = $1", [user]), '42501');
+      await rejectsCode(db.query('INSERT INTO nhan_su_khu_tro VALUES ($1, $2)', [AREA_B, user]), '42501');
+    });
+  }
+});
+
+test('phân quyền: chỉ quản lý được giao khu và chủ trọ nhận thông báo complain', async () => {
+  await db.exec('BEGIN');
+  try {
+    await db.query('INSERT INTO nhan_su_khu_tro VALUES ($1, $2)', [AREA_A, ADMIN]);
+    await db.exec('DELETE FROM thong_bao');
+    await asUser(TENANT_A, () => db.query('INSERT INTO su_co (phong_id, tieu_de) VALUES ($1, $2)', [ROOM_A, 'Báo mới']));
+    const recipients = (await db.query("SELECT nguoi_nhan_id FROM thong_bao WHERE loai = 'su_co'")).rows.map((r) => r.nguoi_nhan_id).sort();
+    assert.deepEqual(recipients, [OWNER, MANAGER].sort());
+  } finally { await db.exec('ROLLBACK'); }
+});
+
+test('phân quyền: quản trị chỉ đọc ảnh sự cố, quản lý đúng khu được xóa', async () => {
+  await db.exec('BEGIN');
+  try {
+    const path = `${ROOM_A}/complain.jpg`;
+    await asUser(TENANT_A, () => db.query("INSERT INTO storage.objects (bucket_id, name) VALUES ('anh-su-co', $1)", [path]));
+    await asUser(ADMIN, async () => {
+      assert.equal((await db.query('SELECT * FROM storage.objects WHERE name = $1', [path])).rows.length, 1);
+      await db.exec('SAVEPOINT denied_upload');
+      await rejectsCode(db.query("INSERT INTO storage.objects (bucket_id, name) VALUES ('anh-su-co', $1)", [`${ROOM_A}/admin.jpg`]), '42501');
+      await db.exec('ROLLBACK TO SAVEPOINT denied_upload');
+    });
+  } finally { await db.exec('ROLLBACK'); }
+  await db.exec('BEGIN');
+  try {
+    const path = `${ROOM_A}/complain.jpg`;
+    await db.query("INSERT INTO storage.objects (bucket_id, name) VALUES ('anh-su-co', $1)", [path]);
+    await asUser(ADMIN, async () => {
+      assert.equal((await db.query('DELETE FROM storage.objects WHERE name = $1 RETURNING id', [path])).rows.length, 0);
+    });
+    await asUser(MANAGER, async () => {
+      assert.equal((await db.query('DELETE FROM storage.objects WHERE name = $1 RETURNING id', [path])).rows.length, 1);
+    });
+  } finally { await db.exec('ROLLBACK'); }
+});
+
+test('phân quyền: tài khoản quản lý bị khóa không còn quyền xử lý', async () => {
+  await db.query('UPDATE nguoi_dung SET dang_hoat_dong = false WHERE id = $1', [MANAGER]);
+  try {
+    await asUser(MANAGER, () => rejectsCode(update(ISSUE_A, 'hoan_tat'), '42501'));
+  } finally {
+    await db.query('UPDATE nguoi_dung SET dang_hoat_dong = true WHERE id = $1', [MANAGER]);
   }
 });
 

@@ -1,26 +1,17 @@
--- Migration: 003_functions_triggers.sql
 -- Hàm tiện ích phân quyền, tính hóa đơn, trigger nghiệp vụ, RPC cho frontend.
--- Mọi hàm SECURITY DEFINER đều cố định search_path và tự kiểm tra quyền bên trong.
 
--- =====================================================================
 -- 1. Hàm trợ giúp phân quyền (dùng trong RLS)
--- =====================================================================
 CREATE OR REPLACE FUNCTION vai_tro_hien_tai() RETURNS text
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT vai_tro FROM public.nguoi_dung WHERE id = auth.uid() AND dang_hoat_dong
 $$;
 
-CREATE OR REPLACE FUNCTION la_nhan_su_khu_tro(p_khu_tro_id uuid) RETURNS boolean
+CREATE OR REPLACE FUNCTION public.la_nhan_su_khu_tro(p_khu_tro_id uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT COALESCE(
-    public.vai_tro_hien_tai() = 'quan_tri'
-    OR EXISTS (SELECT 1 FROM public.khu_tro p
-                WHERE p.id = p_khu_tro_id AND p.chu_tro_id = auth.uid()
-                  AND public.vai_tro_hien_tai() = 'chu_tro')
-    OR EXISTS (SELECT 1 FROM public.nhan_su_khu_tro s
-                WHERE s.khu_tro_id = p_khu_tro_id AND s.nguoi_dung_id = auth.uid()
-                  AND public.vai_tro_hien_tai() = 'quan_ly'),
-    FALSE)
+  SELECT COALESCE(public.vai_tro_hien_tai() IN ('chu_tro', 'quan_tri')
+    OR (public.vai_tro_hien_tai() = 'quan_ly' AND EXISTS (
+      SELECT 1 FROM public.nhan_su_khu_tro
+      WHERE khu_tro_id = p_khu_tro_id AND nguoi_dung_id = auth.uid())), FALSE)
 $$;
 
 CREATE OR REPLACE FUNCTION la_nhan_su_phong(p_phong_id uuid) RETURNS boolean
@@ -28,6 +19,24 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT COALESCE(
     (SELECT public.la_nhan_su_khu_tro(r.khu_tro_id) FROM public.phong_tro r WHERE r.id = p_phong_id), FALSE)
 $$;
+
+CREATE OR REPLACE FUNCTION public.co_the_xu_ly_su_co(p_phong_id uuid) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT COALESCE(public.vai_tro_hien_tai() = 'chu_tro'
+    OR (public.vai_tro_hien_tai() = 'quan_ly' AND public.la_nhan_su_phong(p_phong_id)), FALSE)
+$$;
+REVOKE ALL ON FUNCTION public.co_the_xu_ly_su_co(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.co_the_xu_ly_su_co(uuid) TO authenticated;
+
+CREATE OR REPLACE FUNCTION public.ds_nguoi_xu_ly_su_co(p_khu_tro_id uuid) RETURNS uuid[]
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT COALESCE(array_agg(u.id), '{}') FROM public.nguoi_dung u
+  WHERE u.dang_hoat_dong AND (u.vai_tro = 'chu_tro'
+    OR (u.vai_tro = 'quan_ly' AND EXISTS (
+      SELECT 1 FROM public.nhan_su_khu_tro s
+      WHERE s.khu_tro_id = p_khu_tro_id AND s.nguoi_dung_id = u.id)))
+$$;
+REVOKE ALL ON FUNCTION public.ds_nguoi_xu_ly_su_co(uuid) FROM PUBLIC, anon, authenticated;
 
 CREATE OR REPLACE FUNCTION la_nguoi_thue_phong(p_phong_id uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
@@ -59,9 +68,7 @@ END $$;
 -- Chỉ trigger/Edge Function (service vai_tro) được gọi trực tiếp; client không được tự bơm thông báo
 REVOKE ALL ON FUNCTION gui_thong_bao(uuid[], text, text, text, text, jsonb) FROM PUBLIC, anon, authenticated;
 
--- =====================================================================
 -- 2. Tính tiền điện/nước theo đơn giá phẳng của khu
--- =====================================================================
 CREATE OR REPLACE FUNCTION tinh_tien_dien_nuoc(p_khu_tro_id uuid, p_loai text, p_so_tieu_thu int)
 RETURNS numeric
 LANGUAGE plpgsql STABLE SET search_path = public AS $$
@@ -75,9 +82,7 @@ BEGIN
   RETURN p_so_tieu_thu * COALESCE(v_don_gia, 0);
 END $$;
 
--- =====================================================================
 -- 3. Sinh hóa đơn tháng từ chỉ số + dịch vụ (tạo bản nháp)
--- =====================================================================
 CREATE OR REPLACE FUNCTION tao_hoa_don(p_hop_dong_id uuid, p_ky date)
 RETURNS hoa_don
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
@@ -200,9 +205,7 @@ BEGIN
 END $$;
 REVOKE ALL ON FUNCTION danh_dau_hoa_don_qua_han() FROM PUBLIC, anon, authenticated;
 
--- =====================================================================
 -- 4. Thanh toán: người thuê gửi UNC -> chủ trọ duyệt
--- =====================================================================
 CREATE OR REPLACE FUNCTION thanh_toan_sau_khi_them() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE b hoa_don; r phong_tro;
@@ -269,9 +272,7 @@ END $$;
 CREATE TRIGGER trg_thanh_toan_sau_sua AFTER UPDATE OF trang_thai ON thanh_toan
   FOR EACH ROW EXECUTE FUNCTION thanh_toan_sau_khi_sua();
 
--- =====================================================================
 -- 5. Sự cố: lịch sử trạng thái + thông báo hai chiều
--- =====================================================================
 CREATE OR REPLACE FUNCTION su_co_truoc_khi_ghi() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -293,7 +294,7 @@ BEGIN
   IF TG_OP = 'INSERT' THEN
     INSERT INTO lich_su_su_co (su_co_id, tu_trang_thai, den_trang_thai, nguoi_thuc_hien_id)
     VALUES (NEW.id, NULL, NEW.trang_thai, auth.uid());
-    PERFORM gui_thong_bao(ds_nhan_su_khu_tro(r.khu_tro_id), 'su_co',
+    PERFORM gui_thong_bao(ds_nguoi_xu_ly_su_co(r.khu_tro_id), 'su_co',
       'Phòng ' || r.so_phong || ' báo sự cố', NEW.tieu_de,
       '/su_co/' || NEW.id, jsonb_build_object('su_co_id', NEW.id));
   ELSIF NEW.trang_thai IS DISTINCT FROM OLD.trang_thai THEN
@@ -311,9 +312,7 @@ END $$;
 CREATE TRIGGER trg_su_co_sau_ghi AFTER INSERT OR UPDATE ON su_co
   FOR EACH ROW EXECUTE FUNCTION su_co_sau_khi_ghi();
 
--- =====================================================================
 -- 6. Thông báo hàng loạt theo khu / tầng / phòng
--- =====================================================================
 CREATE OR REPLACE FUNCTION gui_thong_bao_chung(
   p_khu_tro_id uuid, p_tieu_de text, p_noi_dung text,
   p_pham_vi text DEFAULT 'tat_ca', p_cac_tang int[] DEFAULT '{}', p_cac_phong_id uuid[] DEFAULT '{}'
@@ -342,9 +341,7 @@ BEGIN
   RETURN v_ann;
 END $$;
 
--- =====================================================================
 -- 7. Dashboard + view danh sách phòng (cho FE: màu trạng thái, lọc nhanh)
--- =====================================================================
 CREATE OR REPLACE FUNCTION tong_quan_dashboard(p_khu_tro_id uuid, p_ky date DEFAULT NULL)
 RETURNS jsonb
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$

@@ -13,7 +13,7 @@ Toàn bộ tên bảng, cột, hàm và giá trị trạng thái đều bằng t
 
 | Cột | Giá trị |
 |---|---|
-| `nguoi_dung.vai_tro` | `quan_tri` (admin) · `chu_tro` (landlord) · `quan_ly` (manager) · `nguoi_thue` (tenant) |
+| `nguoi_dung.vai_tro` | Thứ bậc: `chu_tro` > `quan_tri` > `quan_ly` > `nguoi_thue`; xem [phân quyền](phan-quyen.md) |
 | `phong_tro.trang_thai` | `trong` (available) · `dang_thue` (occupied) · `bao_tri` (maintenance) |
 | `hop_dong.trang_thai` | `hieu_luc` · `het_han` · `cham_dut` |
 | `hoa_don.trang_thai_thanh_toan` | `chua_thanh_toan` · `cho_xac_nhan` · `thanh_toan_mot_phan` · `da_thanh_toan` · `qua_han` |
@@ -83,7 +83,7 @@ Hồ sơ người dùng, gắn 1-1 với tài khoản đăng nhập (auth.users)
 | `so_dien_thoai` | Số điện thoại dạng 0901234567 (dùng để đăng nhập) |
 | `ho_ten` | Họ và tên |
 | `cccd` | Số căn cước công dân |
-| `vai_tro` | quan_tri | chu_tro | quan_ly | nguoi_thue (mặc định nguoi_thue, chỉ quản trị mới đổi được) |
+| `vai_tro` | `chu_tro`, `quan_tri`, `quan_ly`, `nguoi_thue` (mặc định). Chủ trọ quản lý mọi role; quản trị chỉ đổi giữa quản lý/người thuê cho tài khoản cấp dưới. |
 | `anh_dai_dien` | Đường dẫn ảnh đại diện |
 | `dang_hoat_dong` | false = khóa tài khoản |
 | `tao_luc` | Thời điểm tạo |
@@ -261,7 +261,7 @@ Biên lai/ủy nhiệm chi người thuê gửi lên để chủ trọ duyệt.
 
 ### `su_co`
 
-Sự cố/báo hỏng thiết bị do người thuê báo. Quản lý xử lý trong khu được giao; chủ trọ/quản trị có thể giám sát và can thiệp theo phạm vi hiện có. Trạng thái `chua_the_xu_ly` vẫn là sự cố đang mở.
+Sự cố/báo hỏng thiết bị do người thuê báo. Quản lý xử lý trong khu được giao; chủ trọ giám sát và can thiệp toàn hệ thống; quản trị chỉ xem. Trạng thái `chua_the_xu_ly` vẫn là sự cố đang mở.
 
 | Cột | Ý nghĩa |
 |---|---|

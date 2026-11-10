@@ -3,7 +3,7 @@ import { useAuth } from '../features/auth/useAuth'
 import { InstallPrompt } from './InstallPrompt'
 
 const NHAN_VAI_TRO = {
-  quan_tri: 'Quản trị',
+  quan_tri: 'Quản trị hệ thống',
   chu_tro: 'Chủ trọ',
   quan_ly: 'Quản lý',
   nguoi_thue: 'Người thuê',
