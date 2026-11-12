@@ -1,4 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
+import IssueManagementPage from './features/issues/IssueManagementPage'
+import IssueReportPage from './features/issues/IssueReportPage'
 import LoginPage from './features/auth/LoginPage'
 import { RequireAuth } from './features/auth/RequireAuth'
 import { AppLayout } from './components/AppLayout'
@@ -7,6 +9,8 @@ import DashboardPage from './features/dashboard/DashboardPage'
 export default function App() {
   return (
     <Routes>
+      <Route path="/issue-management" element={<IssueManagementPage />} />
+      <Route path="/issues" element={<IssueReportPage />} />
       <Route path="/dang-nhap" element={<LoginPage />} />
       <Route path="/khong-co-quyen" element={<p className="p-6">Bạn không có quyền truy cập trang này.</p>} />
       <Route element={<RequireAuth />}>
