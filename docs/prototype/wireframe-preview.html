@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bản Vẽ Wireframe UI/UX Tương Tác - PWA Quản Lý Nhà Trọ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', -apple-system, sans-serif; }
+    body { background-color: #0f172a; color: #1e293b; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 24px 16px; }
+    .header-bar { text-align: center; color: #f8fafc; margin-bottom: 20px; }
+    .header-bar h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .header-bar p { font-size: 14px; color: #94a3b8; }
+    .badge-tv6 { display: inline-block; background: #2563eb; color: #fff; padding: 4px 12px; border-radius: 999px; font-size: 12px; font-weight: 600; margin-top: 6px; }
+
+    /* Smartphone Frame */
+    .phone-mockup {
+      width: 390px;
+      height: 780px;
+      background: #f8fafc;
+      border: 12px solid #1e293b;
+      border-radius: 44px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 2px #334155;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    .phone-notch {
+      width: 140px;
+      height: 24px;
+      background: #1e293b;
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      border-bottom-left-radius: 16px;
+      border-bottom-right-radius: 16px;
+      z-index: 50;
+    }
+
+    /* Top App Bar */
+    .app-header {
+      background: #ffffff;
+      padding: 34px 16px 12px 16px;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .app-header .logo-area h2 { font-size: 16px; font-weight: 700; color: #0f172a; }
+    .app-header .logo-area p { font-size: 12px; color: #64748b; }
+    .user-pill { background: #eff6ff; color: #2563eb; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 8px; }
+
+    /* Screen Views */
+    .screen-container { flex: 1; overflow-y: auto; padding: 16px; }
+    .view-screen { display: none; }
+    .view-screen.active { display: block; animation: fadeIn 0.2s ease-in-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Bottom Navigation */
+    .bottom-nav {
+      height: 68px;
+      background: #ffffff;
+      border-top: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      padding-bottom: 6px;
+    }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: none;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 500;
+      cursor: pointer;
+      min-width: 64px;
+      min-height: 48px; /* Standard Touch Target 48px */
+      transition: all 0.2s;
+    }
+    .nav-item.active { color: #2563eb; font-weight: 700; }
+    .nav-item .icon { font-size: 20px; margin-bottom: 2px; }
+
+    /* Cards and UI widgets */
+    .card { background: #ffffff; border-radius: 14px; padding: 14px; margin-bottom: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .stat-box { background: #f1f5f9; padding: 10px 12px; border-radius: 10px; }
+    .stat-box .num { font-size: 18px; font-weight: 700; color: #0f172a; }
+    .stat-box .lbl { font-size: 11px; color: #64748b; }
+
+    /* Status Badges */
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    .badge-paid { background: #dcfce7; color: #15803d; }
+    .badge-due { background: #fee2e2; color: #b91c1c; }
+    .badge-warn { background: #fef3c7; color: #b45309; }
+    .badge-empty { background: #e2e8f0; color: #475569; }
+
+    /* Buttons */
+    .btn-action {
+      min-height: 48px; /* WCAG 48px Touch Target */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      background: #2563eb;
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .btn-action:hover { background: #1d4ed8; }
+
+    /* VietQR Mockup */
+    .qr-card { text-align: center; background: #fff; padding: 16px; border-radius: 16px; border: 2px dashed #93c5fd; }
+    .qr-box { width: 160px; height: 160px; background: #f8fafc; border: 1px solid #cbd5e1; margin: 12px auto; display: flex; align-items: center; justify-content: center; font-size: 60px; border-radius: 12px; }
+  </style>
+</head>
+<body>
+
+  <div class="header-bar">
+    <h1>BẢN MÔ PHỎNG WIREFRAME UI/UX (PWA QUẢN LÝ NHÀ TRỌ)</h1>
+    <p>Quy chuẩn thiết kế Mobile-First • Touch Target 48px • Tối ưu người lớn tuổi</p>
+    <div class="badge-tv6">Thực hiện: Võ Ngọc Định – TV6 (QA / UI-UX Specialist)</div>
+  </div>
+
+  <div class="phone-mockup">
+    <div class="phone-notch"></div>
+
+    <header class="app-header">
+      <div class="logo-area">
+        <h2>Nhà Trọ Bình An</h2>
+        <p>Khu A • TP. Thủ Đức</p>
+      </div>
+      <div class="user-pill">Chủ trọ / Quản lý</div>
+    </header>
+
+    <div class="screen-container">
+
+      <!-- SCREEN 1: DANH SÁCH PHÒNG & TỔNG QUAN -->
+      <div id="screen-rooms" class="view-screen active">
+        <div class="grid-2">
+          <div class="stat-box">
+            <div class="num">14 / 16</div>
+            <div class="lbl">Phòng đang thuê</div>
+          </div>
+          <div class="stat-box">
+            <div class="num text-red-600" style="color:#dc2626;">3 phòng nợ</div>
+            <div class="lbl">Cần thu: 9.850.000đ</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px; font-size:13px; font-weight:600; color:#475569;">BỘ LỌC PHÒNG</div>
+        <div style="display:flex; gap:6px; margin-bottom:14px; overflow-x:auto;">
+          <button style="padding:6px 12px; border-radius:8px; border:none; background:#2563eb; color:#fff; font-size:12px; font-weight:600;">Tất cả (16)</button>
+          <button style="padding:6px 12px; border-radius:8px; border:1px solid #cbd5e1; background:#fff; font-size:12px;">Nợ tiền (3)</button>
+          <button style="padding:6px 12px; border-radius:8px; border:1px solid #cbd5e1; background:#fff; font-size:12px;">Sự cố (1)</button>
+        </div>
+
+        <!-- Room 101 -->
+        <div class="card" style="border-left: 4px solid #ef4444;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <div style="font-size:16px; font-weight:700;">Phòng 101 (Tầng 1)</div>
+              <div style="font-size:13px; color:#64748b; margin-top:2px;">Anh Nguyễn Văn A • 0908.123.xxx</div>
+            </div>
+            <span class="badge badge-due">Nợ 3.850.000đ</span>
+          </div>
+          <div style="margin-top:10px; font-size:13px; color:#334155;">
+            ⚡ Điện: 1.450 ➔ 1.580 (130 kWh) • 💧 Nước: 8 m³
+          </div>
+          <button class="btn-action" style="background:#f1f5f9; color:#2563eb; border:1px solid #bfdbfe; font-size:13px;" onclick="showScreen('screen-billing')">
+            📋 Xem Hóa Đơn & Mã VietQR
+          </button>
+        </div>
+
+        <!-- Room 102 -->
+        <div class="card" style="border-left: 4px solid #f59e0b;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <div style="font-size:16px; font-weight:700;">Phòng 102 (Tầng 1)</div>
+              <div style="font-size:13px; color:#64748b; margin-top:2px;">Bạn Trần Thị Thuê • 0912.456.xxx</div>
+            </div>
+            <span class="badge badge-warn">⚠️ Hỏng máy lạnh</span>
+          </div>
+          <div style="margin-top:10px; font-size:13px; color:#334155;">
+            Trạng thái xử lý: <b>Đang chờ thợ kiểm tra</b>
+          </div>
+          <button class="btn-action" style="background:#fef3c7; color:#b45309; border:none; font-size:13px;" onclick="showScreen('screen-issues')">
+            🔧 Xem Tiến Độ Sửa Chữa
+          </button>
+        </div>
+
+        <!-- Room 201 -->
+        <div class="card" style="border-left: 4px solid #10b981;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <div style="font-size:16px; font-weight:700;">Phòng 201 (Tầng 2)</div>
+              <div style="font-size:13px; color:#64748b; margin-top:2px;">Bác Lê Văn Khách • 0989.789.xxx</div>
+            </div>
+            <span class="badge badge-paid">Đã thanh toán</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SCREEN 2: GHI CHỈ SỐ ĐIỆN NƯỚC -->
+      <div id="screen-meter" class="view-screen">
+        <div class="card">
+          <div style="font-size:15px; font-weight:700; margin-bottom:4px;">GHI CHỈ SỐ ĐIỆN NƯỚC (P.101)</div>
+          <div style="font-size:12px; color:#64748b; margin-bottom:12px;">Kỳ thanh toán: Tháng 11/2026</div>
+
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">⚡ Số điện mới (Số cũ: 1.450 kWh)</label>
+          <input type="number" value="1580" style="width:100%; min-height:48px; border:1px solid #cbd5e1; border-radius:10px; padding:0 12px; font-size:16px; font-weight:600; margin-bottom:8px;">
+          <div style="font-size:12px; color:#15803d; margin-bottom:14px;">➔ Tiêu thụ: 130 kWh x 3.500đ = 455.000đ</div>
+
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">📷 Ảnh chụp công tơ làm chứng từ</label>
+          <div style="border:2px dashed #cbd5e1; border-radius:10px; padding:16px; text-align:center; background:#f8fafc; font-size:13px; color:#64748b;">
+            📸 [ Bấm để chụp hoặc tải ảnh công tơ ]
+          </div>
+
+          <button class="btn-action" onclick="alert('Đã lưu chỉ số & tự động tính hóa đơn thành công!')">
+            Xuất Hóa Đơn Tự Động
+          </button>
+        </div>
+      </div>
+
+      <!-- SCREEN 3: HÓA ĐƠN & VIETQR -->
+      <div id="screen-billing" class="view-screen">
+        <div class="qr-card">
+          <div style="font-size:12px; color:#64748b; font-weight:600;">QUÉT MÃ VIETQR ĐỂ TRẢ TIỀN PHÒNG</div>
+          <div style="font-size:22px; font-weight:800; color:#1d4ed8; margin:6px 0;">3.850.000 đ</div>
+          <div class="qr-box">📱QR</div>
+          <div style="font-size:13px; font-weight:600;">Vietcombank • 970436xxxxxxxx</div>
+          <div style="font-size:12px; color:#64748b; margin-top:4px;">Nội dung: <b>PHONG101 T11</b></div>
+        </div>
+
+        <div class="card" style="margin-top:12px;">
+          <div style="font-size:14px; font-weight:700; margin-bottom:8px;">Chi tiết hóa đơn P.101</div>
+          <div style="display:flex; justify-content:space-between; font-size:13px; padding:4px 0;">
+            <span>Tiền phòng:</span><span>3.000.000đ</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:13px; padding:4px 0;">
+            <span>Tiền điện (130 kWh):</span><span>455.000đ</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:13px; padding:4px 0;">
+            <span>Tiền nước (8 m³):</span><span>145.000đ</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; font-size:13px; padding:4px 0;">
+            <span>Phí dịch vụ (Rác, Wifi):</span><span>250.000đ</span>
+          </div>
+          <hr style="margin:8px 0; border:none; border-top:1px dashed #cbd5e1;">
+          <button class="btn-action" style="background:#15803d;" onclick="alert('Đã gửi hóa đơn dạng ảnh qua Zalo cho khách thuê!')">
+            📲 Gửi Hóa Đơn Qua Zalo
+          </button>
+        </div>
+      </div>
+
+      <!-- SCREEN 4: SỰ CỐ & TIẾN ĐỘ -->
+      <div id="screen-issues" class="view-screen">
+        <div class="card">
+          <div style="font-size:15px; font-weight:700;">TIẾP NHẬN SỰ CỐ (P.102)</div>
+          <p style="font-size:13px; color:#64748b; margin:4px 0 12px 0;">Khách báo: "Chảy nước dàn lạnh máy lạnh, kêu to"</p>
+
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Cập nhật trạng thái xử lý:</label>
+          <select style="width:100%; min-height:48px; border:1px solid #cbd5e1; border-radius:10px; padding:0 12px; font-size:14px; margin-bottom:10px;">
+            <option>⏳ Đang xử lý (Đã hẹn thợ 14:00)</option>
+            <option>✅ Đã hoàn tất sửa chữa</option>
+            <option>⏸️ Chưa thể xử lý (Cần nhập lý do)</option>
+          </select>
+
+          <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Chi phí sửa chữa (VNĐ):</label>
+          <input type="number" value="250000" style="width:100%; min-height:48px; border:1px solid #cbd5e1; border-radius:10px; padding:0 12px; font-size:15px; margin-bottom:12px;">
+
+          <button class="btn-action" onclick="alert('Đã lưu trạng thái sự cố và gửi thông báo tới người thuê!')">
+            Cập Nhật Tiến Độ & Thông Báo
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Bottom Navigation Bar (48px Touch Target) -->
+    <nav class="bottom-nav">
+      <button class="nav-item active" onclick="showScreen('screen-rooms', this)">
+        <span class="icon">🏢</span>
+        <span>Phòng trọ</span>
+      </button>
+      <button class="nav-item" onclick="showScreen('screen-meter', this)">
+        <span class="icon">⚡</span>
+        <span>Ghi điện</span>
+      </button>
+      <button class="nav-item" onclick="showScreen('screen-billing', this)">
+        <span class="icon">📋</span>
+        <span>Hóa đơn</span>
+      </button>
+      <button class="nav-item" onclick="showScreen('screen-issues', this)">
+        <span class="icon">🔧</span>
+        <span>Sự cố</span>
+      </button>
+    </nav>
+  </div>
+
+  <script>
+    function showScreen(screenId, btn) {
+      document.querySelectorAll('.view-screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+      if (btn) {
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+    }
+  </script>
+</body>
+</html>

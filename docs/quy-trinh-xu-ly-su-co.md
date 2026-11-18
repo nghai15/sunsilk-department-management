@@ -8,8 +8,8 @@ Quản lý xem báo cáo trong các khu được phân công, kiểm tra thực 
 |---|---|
 | Người thuê | Gửi báo cáo kèm ảnh; xem sự cố của phòng và lịch sử; sửa nội dung hoặc hủy báo cáo của mình khi còn chờ tiếp nhận |
 | Quản lý | Xem, cập nhật trạng thái, ghi chú và chi phí trong khu được gán qua `nhan_su_khu_tro` |
-| Chủ trọ | Xem và can thiệp đối với sự cố thuộc khu mình sở hữu |
-| Quản trị | Xem và can thiệp đối với sự cố trong các khu của hệ thống |
+| Chủ trọ | Quyền cao nhất: xem, giám sát và can thiệp sự cố toàn hệ thống |
+| Quản trị | Chỉ xem sự cố; quản trị hệ thống dưới quyền chủ trọ, không xử lý complain |
 
 Người thuê không được tự đánh dấu đã xử lý, điền ghi chú xử lý hoặc thay đổi chi phí. Người quản lý không xem hay xử lý được sự cố ở khu chưa được phân công. RLS và trigger kiểm tra cả khi gọi RPC lẫn cập nhật bảng trực tiếp.
 
@@ -33,6 +33,7 @@ Ví dụ: **Chờ tiếp nhận → Đang xử lý → Chưa thể xử lý → 
 - `su_co.hoan_tat_luc`: database tự ghi khi hoàn tất; giữ nguyên nếu chỉ sửa ghi chú của sự cố đã hoàn tất; xóa khi mở lại.
 - `lich_su_su_co`: tự ghi trạng thái trước/sau, ghi chú, chi phí tại thời điểm cập nhật, người thực hiện và thời gian.
 - Cập nhật ghi chú hoặc chi phí mà giữ nguyên trạng thái vẫn tạo lịch sử. Lưu lại dữ liệu không đổi không tạo lịch sử trùng.
+- Sự cố mới gửi thông báo cho chủ trọ và quản lý của khu (đường dẫn `/issues/<id>`).
 - Đổi trạng thái gửi thông báo cho người báo cáo, kèm ghi chú để họ biết lý do chưa thể xử lý. Chỉ sửa ghi chú/chi phí không tạo thông báo lặp.
 - Lịch sử cũ được giữ nguyên. Cột chi phí của các bản ghi lịch sử trước migration 006 để NULL vì trước đây chưa lưu số liệu này.
 
@@ -61,7 +62,7 @@ const { data, error } = await supabase.rpc('cap_nhat_xu_ly_su_co', {
 });
 ```
 
-RPC chấp nhận `dang_xu_ly`, `chua_the_xu_ly`, `hoan_tat`, `da_huy`. Trạng thái ban đầu Chờ tiếp nhận được tạo khi gửi báo cáo. Chi phí bỏ qua hoặc NULL sẽ giữ số cũ; truyền 0 để đặt về 0. Ghi chú bỏ qua hoặc NULL sẽ xóa ghi chú hiện tại, nhưng ghi chú cũ vẫn nằm trong lịch sử. Mỗi lần chọn Chưa thể xử lý phải truyền lý do không rỗng.
+RPC chấp nhận `dang_xu_ly`, `chua_the_xu_ly`, `hoan_tat`, `da_huy`. Trạng thái ban đầu Chờ tiếp nhận được tạo khi gửi báo cáo. Chi phí bỏ qua hoặc NULL sẽ giữ số cũ; truyền 0 để đặt về 0. Ghi chú bỏ qua hoặc NULL: nếu trạng thái giữ nguyên thì giữ ghi chú hiện tại; nếu đổi trạng thái thì xóa ghi chú (ghi chú cũ vẫn nằm trong lịch sử). Truyền chuỗi rỗng để chủ động xóa ghi chú. Mỗi lần chọn Chưa thể xử lý phải truyền lý do không rỗng.
 
 RPC trả về dòng `su_co` với tên cột `snake_case`. Frontend chuyển `ghi_chu_xu_ly` thành `ghiChuXuLy`, `chi_phi_sua_chua` thành `chiPhiSuaChua`, cùng quy ước đã có trong `src/types/index.ts`.
 
@@ -69,7 +70,7 @@ Các nhãn và danh sách trạng thái còn mở có sẵn tại `frontend/src/
 
 ## Cập nhật database
 
-Nếu database đã áp dụng 001–005, chạy file `backend/migrations/006_quy_trinh_xu_ly_su_co.sql` trong Supabase SQL Editor. Migration bổ sung cột, trạng thái và thay hàm/trigger/view liên quan; giữ dữ liệu cũ. Không xóa database và không cần chạy lại seed.
+Database local đã có: xem [hướng dẫn reset](phan-quyen.md#áp-dụng).
 
 Database mới áp dụng lần lượt 001–006, sau đó seed như hướng dẫn trong `backend/README.md`. Nếu dùng Supabase CLI, cập nhật bản copy/liên kết trong `backend/supabase/migrations` trước khi áp dụng migration.
 

@@ -30,6 +30,7 @@ dist-ssr
 .env.production
 .env.development
 *.env*
+!.env.example
 
 # Supabase / Backend secrets
 backend/**/temp/
@@ -37,3 +38,7 @@ backend/**/temp/
 # Backend secrets
 backend/.env
 backend/supabase/.temp
+
+# Internal planning documents (not for remote push)
+phan-cong-nhiem-vu-6-thanh-vien.md
+PWA-Quan-ly-nha-tro-Mo-ta-va-ke-hoach.md

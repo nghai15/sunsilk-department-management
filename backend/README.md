@@ -45,4 +45,5 @@ Chạy tại thư mục `backend`:
 | Khởi động | `npx.cmd supabase start` |
 | Xem trạng thái | `npx.cmd supabase status` |
 | Dừng và giữ dữ liệu | `npx.cmd supabase stop` |
+| Khởi động lại dữ liệu | `npx.cmd supabase db reset --local` |
 

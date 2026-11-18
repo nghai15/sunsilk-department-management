@@ -1,13 +1,10 @@
--- Migration: 004_rls_storage.sql
 -- Row Level Security + Storage.
 --   * Người thuê (tenant): chỉ thấy dữ liệu phòng/hợp đồng/hóa đơn của chính mình.
---   * Chủ trọ (landlord): toàn quyền với các khu mình sở hữu. Quản lý (manager): các khu được gán.
---   * Admin: toàn hệ thống.
+--   * Chủ trọ: quyền cao nhất toàn hệ thống. Quản trị: vận hành hệ thống, chỉ xem sự cố.
+--   * Quản lý: khu được giao, trực tiếp xử lý sự cố.
 -- Edge Functions dùng service vai_tro nên bỏ qua RLS.
 
--- =====================================================================
 -- 0. Hàm trợ giúp bổ sung
--- =====================================================================
 CREATE OR REPLACE FUNCTION la_nguoi_thue_khu_tro(p_khu_tro_id uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT EXISTS (SELECT 1 FROM public.hop_dong c JOIN public.phong_tro r ON r.id = c.phong_id
@@ -29,28 +26,35 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT COALESCE((SELECT public.la_nhan_su_phong(b.phong_id) FROM public.hoa_don b WHERE b.id = p_hoa_don_id), FALSE)
 $$;
 
-CREATE OR REPLACE FUNCTION co_the_xem_nguoi_dung(p_nguoi_dung_id uuid) RETURNS boolean
+CREATE OR REPLACE FUNCTION public.co_the_xem_nguoi_dung(p_nguoi_dung_id uuid) RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT p_nguoi_dung_id = auth.uid()
-      OR public.vai_tro_hien_tai() = 'quan_tri'
-      OR EXISTS (SELECT 1 FROM public.hop_dong c JOIN public.phong_tro r ON r.id = c.phong_id
-                  WHERE c.nguoi_thue_id = p_nguoi_dung_id AND public.la_nhan_su_khu_tro(r.khu_tro_id))
+    OR public.vai_tro_hien_tai() IN ('chu_tro', 'quan_tri')
+    OR EXISTS (SELECT 1 FROM public.hop_dong c JOIN public.phong_tro r ON r.id = c.phong_id
+      WHERE c.nguoi_thue_id = p_nguoi_dung_id AND public.la_nhan_su_khu_tro(r.khu_tro_id))
 $$;
 
 CREATE OR REPLACE FUNCTION uuid_an_toan(p text) RETURNS uuid
 LANGUAGE plpgsql IMMUTABLE AS $$
 BEGIN RETURN p::uuid; EXCEPTION WHEN others THEN RETURN NULL; END $$;
 
--- =====================================================================
 -- 1. Bảo vệ cột nhạy cảm (RLS không giới hạn theo cột)
--- =====================================================================
-CREATE OR REPLACE FUNCTION nguoi_dung_bao_ve_cot() RETURNS trigger
+CREATE OR REPLACE FUNCTION public.nguoi_dung_bao_ve_cot() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE v_role text := COALESCE(public.vai_tro_hien_tai(), '');
 BEGIN
-  IF auth.uid() IS NOT NULL AND public.vai_tro_hien_tai() <> 'quan_tri'
-     AND (NEW.vai_tro IS DISTINCT FROM OLD.vai_tro OR NEW.dang_hoat_dong IS DISTINCT FROM OLD.dang_hoat_dong
-          OR NEW.so_dien_thoai IS DISTINCT FROM OLD.so_dien_thoai) THEN
-    RAISE EXCEPTION 'Không được tự đổi vai trò/trạng thái/số điện thoại' USING ERRCODE = '42501';
+  IF auth.uid() IS NOT NULL THEN
+    IF NEW.id IS DISTINCT FROM OLD.id THEN
+      RAISE EXCEPTION 'Không được đổi ID người dùng' USING ERRCODE = '42501';
+    END IF;
+    IF v_role <> 'chu_tro'
+       AND NOT (v_role = 'quan_tri' AND OLD.vai_tro IN ('quan_ly', 'nguoi_thue')
+                AND NEW.vai_tro IN ('quan_ly', 'nguoi_thue'))
+       AND (NEW.vai_tro IS DISTINCT FROM OLD.vai_tro
+         OR NEW.dang_hoat_dong IS DISTINCT FROM OLD.dang_hoat_dong
+         OR NEW.so_dien_thoai IS DISTINCT FROM OLD.so_dien_thoai) THEN
+      RAISE EXCEPTION 'Không được thay đổi quyền hoặc thông tin bảo vệ của tài khoản này' USING ERRCODE = '42501';
+    END IF;
   END IF;
   RETURN NEW;
 END $$;
@@ -60,7 +64,7 @@ CREATE TRIGGER trg_nguoi_dung_protect BEFORE UPDATE ON nguoi_dung
 CREATE OR REPLACE FUNCTION su_co_bao_ve_cot() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  IF auth.uid() IS NOT NULL AND NOT public.la_nhan_su_phong(OLD.phong_id)
+  IF auth.uid() IS NOT NULL AND NOT public.co_the_xu_ly_su_co(OLD.phong_id)
      AND (NEW.chi_phi_sua_chua IS DISTINCT FROM OLD.chi_phi_sua_chua
           OR NEW.phong_id IS DISTINCT FROM OLD.phong_id
           OR NEW.nguoi_thue_id IS DISTINCT FROM OLD.nguoi_thue_id
@@ -85,9 +89,7 @@ END $$;
 CREATE TRIGGER trg_thong_bao_protect BEFORE UPDATE ON thong_bao
   FOR EACH ROW EXECUTE FUNCTION thong_bao_bao_ve_cot();
 
--- =====================================================================
 -- 2. Bật RLS + quyền bảng
--- =====================================================================
 DO $$
 DECLARE t text;
 BEGIN
@@ -104,39 +106,38 @@ GRANT USAGE ON SCHEMA public TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
 REVOKE ALL ON nhat_ky_nhac_no FROM authenticated;   -- chỉ service vai_tro
 
--- =====================================================================
 -- 3. Policies
--- =====================================================================
--- nguoi_dung
 CREATE POLICY nguoi_dung_xem ON nguoi_dung FOR SELECT TO authenticated USING (co_the_xem_nguoi_dung(id));
-CREATE POLICY nguoi_dung_sua_chinh_minh ON nguoi_dung FOR UPDATE TO authenticated
-  USING (id = auth.uid() OR vai_tro_hien_tai() = 'quan_tri') WITH CHECK (id = auth.uid() OR vai_tro_hien_tai() = 'quan_tri');
-CREATE POLICY nguoi_dung_quan_tri_xoa ON nguoi_dung FOR DELETE TO authenticated USING (vai_tro_hien_tai() = 'quan_tri');
+CREATE POLICY nguoi_dung_sua_chinh_minh ON public.nguoi_dung FOR UPDATE TO authenticated
+  USING (id = auth.uid() OR public.vai_tro_hien_tai() = 'chu_tro'
+    OR (public.vai_tro_hien_tai() = 'quan_tri' AND vai_tro IN ('quan_ly', 'nguoi_thue')))
+  WITH CHECK (id = auth.uid() OR public.vai_tro_hien_tai() = 'chu_tro'
+    OR (public.vai_tro_hien_tai() = 'quan_tri' AND vai_tro IN ('quan_ly', 'nguoi_thue')));
+CREATE POLICY nguoi_dung_quan_tri_xoa ON public.nguoi_dung FOR DELETE TO authenticated
+  USING (public.vai_tro_hien_tai() = 'chu_tro'
+    OR (public.vai_tro_hien_tai() = 'quan_tri' AND vai_tro IN ('quan_ly', 'nguoi_thue')));
 
--- khu_tro
 CREATE POLICY khu_tro_xem ON khu_tro FOR SELECT TO authenticated
   USING (la_nhan_su_khu_tro(id) OR la_nguoi_thue_khu_tro(id));
-CREATE POLICY khu_tro_them ON khu_tro FOR INSERT TO authenticated
-  WITH CHECK (vai_tro_hien_tai() = 'quan_tri' OR (vai_tro_hien_tai() = 'chu_tro' AND chu_tro_id = auth.uid()));
+CREATE POLICY khu_tro_them ON public.khu_tro FOR INSERT TO authenticated
+  WITH CHECK (public.vai_tro_hien_tai() IN ('chu_tro', 'quan_tri'));
 CREATE POLICY khu_tro_sua ON khu_tro FOR UPDATE TO authenticated
   USING (la_nhan_su_khu_tro(id)) WITH CHECK (la_nhan_su_khu_tro(id));
-CREATE POLICY khu_tro_xoa ON khu_tro FOR DELETE TO authenticated
-  USING (vai_tro_hien_tai() = 'quan_tri' OR (vai_tro_hien_tai() = 'chu_tro' AND chu_tro_id = auth.uid()));
+CREATE POLICY khu_tro_xoa ON public.khu_tro FOR DELETE TO authenticated
+  USING (public.vai_tro_hien_tai() IN ('chu_tro', 'quan_tri'));
 
--- nhan_su_khu_tro (chủ trọ gán quản lý)
+-- nhan_su_khu_tro (chủ trọ/quản trị gán quản lý)
 CREATE POLICY nhan_su_xem ON nhan_su_khu_tro FOR SELECT TO authenticated
   USING (nguoi_dung_id = auth.uid() OR la_nhan_su_khu_tro(khu_tro_id));
-CREATE POLICY nhan_su_ghi ON nhan_su_khu_tro FOR ALL TO authenticated
-  USING (vai_tro_hien_tai() = 'quan_tri' OR EXISTS (SELECT 1 FROM khu_tro p WHERE p.id = khu_tro_id AND p.chu_tro_id = auth.uid()))
-  WITH CHECK (vai_tro_hien_tai() = 'quan_tri' OR EXISTS (SELECT 1 FROM khu_tro p WHERE p.id = khu_tro_id AND p.chu_tro_id = auth.uid()));
+CREATE POLICY nhan_su_ghi ON public.nhan_su_khu_tro FOR ALL TO authenticated
+  USING (public.vai_tro_hien_tai() IN ('chu_tro', 'quan_tri'))
+  WITH CHECK (public.vai_tro_hien_tai() IN ('chu_tro', 'quan_tri'));
 
--- phong_tro
 CREATE POLICY phong_tro_xem ON phong_tro FOR SELECT TO authenticated
   USING (la_nhan_su_khu_tro(khu_tro_id) OR la_nguoi_thue_phong(id));
 CREATE POLICY phong_tro_ghi ON phong_tro FOR ALL TO authenticated
   USING (la_nhan_su_khu_tro(khu_tro_id)) WITH CHECK (la_nhan_su_khu_tro(khu_tro_id));
 
--- hop_dong
 CREATE POLICY hop_dong_xem ON hop_dong FOR SELECT TO authenticated
   USING (nguoi_thue_id = auth.uid() OR la_nhan_su_phong(phong_id));
 CREATE POLICY hop_dong_ghi ON hop_dong FOR ALL TO authenticated
@@ -148,13 +149,11 @@ CREATE POLICY phi_dich_vu_xem ON phi_dich_vu FOR SELECT TO authenticated
 CREATE POLICY phi_dich_vu_ghi ON phi_dich_vu FOR ALL TO authenticated
   USING (la_nhan_su_khu_tro(khu_tro_id)) WITH CHECK (la_nhan_su_khu_tro(khu_tro_id));
 
--- dich_vu_hop_dong
 CREATE POLICY dich_vu_hop_dong_xem ON dich_vu_hop_dong FOR SELECT TO authenticated
   USING (la_nguoi_thue_hop_dong(hop_dong_id) OR la_nhan_su_hop_dong(hop_dong_id));
 CREATE POLICY dich_vu_hop_dong_ghi ON dich_vu_hop_dong FOR ALL TO authenticated
   USING (la_nhan_su_hop_dong(hop_dong_id)) WITH CHECK (la_nhan_su_hop_dong(hop_dong_id));
 
--- chi_so_cong_to
 CREATE POLICY chi_so_xem ON chi_so_cong_to FOR SELECT TO authenticated
   USING (la_nhan_su_phong(phong_id) OR la_nguoi_thue_phong(phong_id));
 CREATE POLICY chi_so_ghi ON chi_so_cong_to FOR ALL TO authenticated
@@ -184,16 +183,19 @@ CREATE POLICY thanh_toan_sua ON thanh_toan FOR UPDATE TO authenticated
 CREATE POLICY thanh_toan_xoa ON thanh_toan FOR DELETE TO authenticated
   USING (la_nhan_su_hoa_don(hoa_don_id));
 
--- su_co
 CREATE POLICY su_co_xem ON su_co FOR SELECT TO authenticated
   USING (nguoi_thue_id = auth.uid() OR la_nhan_su_phong(phong_id) OR la_nguoi_thue_phong(phong_id));
-CREATE POLICY su_co_them ON su_co FOR INSERT TO authenticated
-  WITH CHECK (la_nhan_su_phong(phong_id)
-    OR (la_nguoi_thue_phong(phong_id) AND COALESCE(nguoi_thue_id, auth.uid()) = auth.uid() AND trang_thai = 'cho_tiep_nhan'));
-CREATE POLICY su_co_sua ON su_co FOR UPDATE TO authenticated
-  USING (la_nhan_su_phong(phong_id) OR (nguoi_thue_id = auth.uid() AND trang_thai = 'cho_tiep_nhan'))
-  WITH CHECK (la_nhan_su_phong(phong_id) OR (nguoi_thue_id = auth.uid() AND trang_thai IN ('cho_tiep_nhan', 'da_huy')));
-CREATE POLICY su_co_xoa ON su_co FOR DELETE TO authenticated USING (la_nhan_su_phong(phong_id));
+CREATE POLICY su_co_them ON public.su_co FOR INSERT TO authenticated
+  WITH CHECK (public.co_the_xu_ly_su_co(phong_id)
+    OR (public.vai_tro_hien_tai() = 'nguoi_thue' AND public.la_nguoi_thue_phong(phong_id)
+      AND COALESCE(nguoi_thue_id, auth.uid()) = auth.uid() AND trang_thai = 'cho_tiep_nhan'));
+CREATE POLICY su_co_sua ON public.su_co FOR UPDATE TO authenticated
+  USING (public.co_the_xu_ly_su_co(phong_id)
+    OR (public.vai_tro_hien_tai() = 'nguoi_thue' AND nguoi_thue_id = auth.uid() AND trang_thai = 'cho_tiep_nhan'))
+  WITH CHECK (public.co_the_xu_ly_su_co(phong_id)
+    OR (public.vai_tro_hien_tai() = 'nguoi_thue' AND nguoi_thue_id = auth.uid() AND trang_thai IN ('cho_tiep_nhan', 'da_huy')));
+CREATE POLICY su_co_xoa ON public.su_co FOR DELETE TO authenticated
+  USING (public.co_the_xu_ly_su_co(phong_id));
 
 CREATE POLICY lich_su_su_co_xem ON lich_su_su_co FOR SELECT TO authenticated
   USING (EXISTS (SELECT 1 FROM su_co i WHERE i.id = su_co_id));
@@ -220,9 +222,7 @@ BEGIN
   END IF;
 END $$;
 
--- =====================================================================
 -- 4. Storage: đường dẫn file bắt buộc dạng  <phong_id>/<tên-file>
--- =====================================================================
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES
   ('anh-cong-to',   'anh-cong-to',   FALSE, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp']),
   ('bien-lai', 'bien-lai', FALSE, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp']),
@@ -237,14 +237,18 @@ CREATE POLICY cong_to_anh_nhan_su ON storage.objects FOR ALL TO authenticated
 CREATE POLICY cong_to_anh_nguoi_thue_doc ON storage.objects FOR SELECT TO authenticated
   USING (bucket_id = 'anh-cong-to' AND la_nguoi_thue_phong(uuid_an_toan((storage.foldername(name))[1])));
 
--- Biên lai & ảnh sự cố: nhân sự + người thuê phòng đó được xem/tải lên; chỉ nhân sự được xóa
+-- Biên lai: nhân sự và người thuê phòng đó được tải lên; ảnh sự cố không cho quản trị ghi/xóa.
 CREATE POLICY phong_tep_xem ON storage.objects FOR SELECT TO authenticated
   USING (bucket_id IN ('bien-lai', 'anh-su-co')
     AND (la_nhan_su_phong(uuid_an_toan((storage.foldername(name))[1])) OR la_nguoi_thue_phong(uuid_an_toan((storage.foldername(name))[1]))));
 CREATE POLICY phong_tep_them ON storage.objects FOR INSERT TO authenticated
-  WITH CHECK (bucket_id IN ('bien-lai', 'anh-su-co')
-    AND (la_nhan_su_phong(uuid_an_toan((storage.foldername(name))[1])) OR la_nguoi_thue_phong(uuid_an_toan((storage.foldername(name))[1]))));
+  WITH CHECK (
+    (bucket_id = 'bien-lai' AND (public.la_nhan_su_phong(public.uuid_an_toan((storage.foldername(name))[1]))
+      OR public.la_nguoi_thue_phong(public.uuid_an_toan((storage.foldername(name))[1]))))
+    OR (bucket_id = 'anh-su-co' AND (public.co_the_xu_ly_su_co(public.uuid_an_toan((storage.foldername(name))[1]))
+      OR (public.vai_tro_hien_tai() = 'nguoi_thue' AND public.la_nguoi_thue_phong(public.uuid_an_toan((storage.foldername(name))[1]))))));
 CREATE POLICY phong_tep_xoa ON storage.objects FOR DELETE TO authenticated
-  USING (bucket_id IN ('bien-lai', 'anh-su-co') AND la_nhan_su_phong(uuid_an_toan((storage.foldername(name))[1])));
+  USING ((bucket_id = 'bien-lai' AND public.la_nhan_su_phong(public.uuid_an_toan((storage.foldername(name))[1])))
+    OR (bucket_id = 'anh-su-co' AND public.co_the_xu_ly_su_co(public.uuid_an_toan((storage.foldername(name))[1]))));
 
 GRANT SELECT ON tong_quan_phong TO authenticated;

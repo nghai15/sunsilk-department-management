@@ -23,7 +23,7 @@ ALTER TABLE nguoi_dung ADD COLUMN IF NOT EXISTS anh_dai_dien TEXT;
 ALTER TABLE nguoi_dung ADD COLUMN IF NOT EXISTS dang_hoat_dong BOOLEAN NOT NULL DEFAULT TRUE;
 
 -- Tự tạo hồ sơ khi có tài khoản Auth mới. Role KHÔNG lấy từ metadata do client gửi
--- (tránh tự phong quyền): luôn là 'nguoi_thue'; chủ trọ do admin nâng quyền bằng service vai_tro.
+-- Tránh tự phong quyền: tài khoản mới luôn là 'nguoi_thue'.
 CREATE OR REPLACE FUNCTION xu_ly_tai_khoan_moi() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN

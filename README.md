@@ -53,7 +53,7 @@ pwa-quan-ly-nha-tro/
 
 Quản lý tiếp nhận báo cáo trong khu được phân công, cập nhật trạng thái, ghi chú và chi phí sửa chữa. Trạng thái **Chưa thể xử lý** bắt buộc có lý do và vẫn được tính là sự cố còn mở. Người thuê theo dõi tiến độ và nhận thông báo khi trạng thái thay đổi.
 
-- Database đã có migrations 001–005: áp dụng thêm `backend/migrations/006_quy_trinh_xu_ly_su_co.sql`, không cần xóa dữ liệu hoặc chạy lại seed.
+- [Phân quyền](docs/phan-quyen.md).
 - API cập nhật: `cap_nhat_xu_ly_su_co(...)`; types và nhãn hiển thị frontend đã được bổ sung.
 - Hướng dẫn nghiệp vụ, API và kiểm thử: [Quy trình xử lý sự cố](docs/quy-trinh-xu-ly-su-co.md).
 
