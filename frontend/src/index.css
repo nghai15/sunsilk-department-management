@@ -1,1 +1,10 @@
 @import "tailwindcss";
+
+:root { font-family: Inter, "Segoe UI", system-ui, sans-serif; color: #183d32; background: #f7f8f5; }
+body { margin: 0; min-width: 320px; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+button:not(:disabled) { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+:focus-visible { outline: 3px solid #78b59f; outline-offset: 3px; }
+input, textarea, select { font-size: 16px; }
+@media print { nav, button { display: none !important; } body { background: white; } }

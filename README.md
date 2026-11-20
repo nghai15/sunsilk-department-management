@@ -1,60 +1,34 @@
-# PWA Quản Lý Nhà Trọ
+# Sunsilk · Quản lý nhà trọ
 
-Ứng dụng PWA (Progressive Web App) hỗ trợ quản lý nhà trọ, căn hộ dịch vụ với giao diện hiện đại (Mobile-First), hỗ trợ hoạt động offline, quét mã VietQR và gửi thông báo nhắc nợ qua Web Push.
+Ứng dụng React + TypeScript + Supabase cho chủ trọ, quản trị, quản lý khu trọ và người thuê.
 
-## 📁 Cấu trúc dự án
+## Chức năng
 
-```text
-pwa-quan-ly-nha-tro/
-├── .github/
-│   └── workflows/              # CI/CD pipeline (build, test, deploy)
-├── docs/                       # Tài liệu thiết kế DB, API specs, wireframe
-├── backend/                    # Edge Functions hoặc Serverless backend
-│   ├── functions/
-│   │   ├── cron-reminders/     # Tác vụ định kỳ nhắc nợ trước/đúng/quá hạn
-│   │   └── send-webpush/       # Xử lý đẩy Web Push notification
-│   ├── migrations/             # SQL schema (Khu nhà, Phòng, Hóa đơn, Sự cố...)
-│   └── seed/                   # Dữ liệu mẫu phục vụ phát triển & test
-├── frontend/                   # Ứng dụng PWA (React/Vue + Tailwind CSS)
-│   ├── public/
-│   │   ├── icons/              # App icons kích thước PWA (192x192, 512x512)
-│   │   ├── manifest.json       # Cấu hình PWA manifest
-│   │   └── sw.js               # Service Worker (offline cache, push listener)
-│   ├── src/
-│   │   ├── assets/             # Hình ảnh, biểu tượng tĩnh
-│   │   ├── components/         # UI components dùng chung
-│   │   │   ├── common/         # Button, Input, Modal, Toast, Badge
-│   │   │   ├── layout/         # Header, BottomNavigation, Sidebar
-│   │   │   └── forms/          # Form chụp ảnh/upload ảnh công tơ, chuyển khoản
-│   │   ├── features/           # Phân tách logic theo domain nghiệp vụ
-│   │   │   ├── auth/           # Đăng nhập số điện thoại/mật khẩu, phân quyền role
-│   │   │   ├── properties/     # Quản lý Khu trọ & Phòng, lọc phòng, hợp đồng
-│   │   │   ├── billing/        # Nhập chỉ số, tính tiền, hóa đơn, VietQR
-│   │   │   ├── issues/         # Báo sự cố, tiến độ xử lý, chi phí
-│   │   │   ├── notifications/  # Hộp thông báo, cấu hình gửi theo phòng/khu
-│   │   │   └── dashboard/      # Bảng tổng quan doanh thu, phòng trống, sự cố
-│   │   ├── hooks/              # Custom hooks (useAuth, usePWAInstall, usePush)
-│   │   ├── services/           # Tương tác Supabase/Firebase API, Storage
-│   │   ├── types/              # TypeScript interface (Room, Bill, Issue, User)
-│   │   ├── utils/              # Format tiền tệ VNĐ, công thức điện nước, tạo VietQR
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   └── vite.config.ts
-└── README.md
-```
+- Khu trọ, phòng, ngân hàng nhận tiền, dịch vụ và đơn giá theo kỳ.
+- Người thuê, tài khoản nhân sự, phân công quản lý theo khu.
+- Tạo/kết thúc hợp đồng, chỉ số bàn giao và dịch vụ áp dụng.
+- Chụp công tơ trên web, duyệt hoặc yêu cầu chụp lại, hóa đơn và VietQR.
+- Biên lai, đối soát và thanh toán một phần; báo cáo theo kỳ, xuất CSV.
+- Sự cố, phản hồi, lịch sử xử lý; thông báo trong app và tích hợp Web Push.
+- Đăng nhập, quên mật khẩu OTP SMS, đổi mật khẩu, xác nhận đăng xuất.
+- PWA có trang ngoại tuyến, giao diện dùng trên điện thoại và máy tính.
 
-## 🚀 Công nghệ sử dụng
-- **Frontend**: React 18 / Vite / TypeScript / Tailwind CSS
-- **PWA**: Service Worker, Web Push API, Manifest
-- **Backend / BaaS**: Supabase / PostgreSQL / Edge Functions
-- **Tiện ích**: VietQR generation, Image compression, Offline-first storage (IndexedDB)
+## Bắt đầu
 
-## Cập nhật quy trình xử lý sự cố
+1. Mở Docker Desktop.
+2. Tại `backend`: `npx supabase start`, rồi `npx supabase functions serve`.
+3. Tại `frontend`: `npm ci`, tạo `.env` theo `.env.example`, rồi `npm run dev`.
+4. Mở `http://localhost:5173`.
 
-Quản lý tiếp nhận báo cáo trong khu được phân công, cập nhật trạng thái, ghi chú và chi phí sửa chữa. Trạng thái **Chưa thể xử lý** bắt buộc có lý do và vẫn được tính là sự cố còn mở. Người thuê theo dõi tiến độ và nhận thông báo khi trạng thái thay đổi.
+Mật khẩu tài khoản mẫu local: `123456`. Chủ trọ `0901234567`, quản trị `0922222222`, quản lý `0911111111`, người thuê `0987654321` hoặc `0976543210`.
 
-- [Phân quyền](docs/phan-quyen.md).
-- API cập nhật: `cap_nhat_xu_ly_su_co(...)`; types và nhãn hiển thị frontend đã được bổ sung.
-- Hướng dẫn nghiệp vụ, API và kiểm thử: [Quy trình xử lý sự cố](docs/quy-trinh-xu-ly-su-co.md).
+## Tài liệu
 
-Bộ mã hiện chưa có màn hình `features/issues`. Phần cập nhật này cung cấp backend, types và tiện ích trạng thái để tích hợp giao diện.
+- [Hướng dẫn chạy local, nghiệp vụ, kiểm thử và triển khai](docs/van-hanh-va-trien-khai.md)
+- [Backend và OTP local](backend/README.md)
+- [Phân quyền](docs/phan-quyen.md)
+- [Quy trình sự cố](docs/quy-trinh-xu-ly-su-co.md)
+
+SMS thật, Web Push và lịch nhắc nợ cần cấu hình dịch vụ. QR chưa tự đối soát ngân hàng; công tơ chưa dùng OCR. Giá thuê tính theo tháng. Không chạy reset database khi cần giữ dữ liệu.
+
+[Hướng dẫn thanh toán tự động qua SePay](docs/thanh-toan-tu-dong-sepay.md) — cấu hình, thử local, đối soát và kết nối ngân hàng thật.

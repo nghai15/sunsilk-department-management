@@ -79,9 +79,14 @@ export async function handler(req: Request): Promise<Response> {
   const db = adminClient();
   const today = todayInVietnam();
   const dryRun = new URL(req.url).searchParams.get("dry_run") === "1";
-  const summary = { hom_nay: today, da_danh_dau_qua_han: 0, sap_den_han: 0, den_han: 0, qua_han: 0, bo_qua: 0, loi: 0, push: null as unknown };
+  const summary = { hom_nay: today, da_danh_dau_qua_han: 0, sap_den_han: 0, den_han: 0, qua_han: 0, bo_qua: 0, loi: 0, nhac_cong_to: 0, push: null as unknown };
 
   try {
+    if (!dryRun) {
+      const meter = await db.rpc('gui_nhac_cong_to');
+      if (meter.error) throw new Error(`Nhắc công tơ: ${meter.error.message}`);
+      summary.nhac_cong_to = Number(meter.data ?? 0);
+    }
     // 1. Cập nhật trạng thái quá hạn
     if (!dryRun) {
       const { data: marked, error } = await db.rpc("danh_dau_hoa_don_qua_han");

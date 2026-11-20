@@ -120,8 +120,8 @@ export function XacNhanThanhToanUNC({
         </label>
         <input
           type="number"
-          min={1000}
-          step={1000}
+          min={1}
+          step={1}
           value={soTienStr}
           onChange={(e) => setSoTienStr(e.target.value)}
           placeholder={String(tongTien)}

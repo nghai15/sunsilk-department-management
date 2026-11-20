@@ -89,7 +89,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const signOut = async () => {
-    await supabase.auth.signOut()
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration()
+      const subscription = await registration?.pushManager?.getSubscription()
+      if (subscription) {
+        const { error: pushError } = await supabase.from('dang_ky_push')
+          .delete().eq('endpoint', subscription.endpoint).eq('nguoi_dung_id', user!.id)
+        const unsubscribed = await subscription.unsubscribe()
+        if (pushError && !unsubscribed) throw new Error('Chưa tắt được thông báo trên thiết bị. Kiểm tra kết nối rồi đăng xuất lại.')
+      }
+    }
+    const { error: signOutError } = await supabase.auth.signOut()
+    if (signOutError) throw signOutError
   }
 
   return (

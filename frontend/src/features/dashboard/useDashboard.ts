@@ -8,6 +8,8 @@ export interface KhuOption {
 }
 
 export function useDashboard() {
+  const [period, setPeriod] = useState(() => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date()).slice(0, 7))
+  const [revision, setRevision] = useState(0)
   const [khuList, setKhuList] = useState<KhuOption[]>([])
   const [khuId, setKhuId] = useState<string | null>(null)
   const [data, setData] = useState<TongQuanDashboard | null>(null)
@@ -28,17 +30,19 @@ export function useDashboard() {
         }
         const list = (rows ?? []) as KhuOption[]
         setKhuList(list)
-        setKhuId(list[0]?.id ?? null)
+        setKhuId(current => list.some(k => k.id === current) ? current : list[0]?.id ?? null)
+        setError(null)
         if (list.length === 0) setLoading(false)
       })
-  }, [])
+  }, [revision])
 
   // Tổng quan của khu đang chọn
   useEffect(() => {
     if (!khuId) return
     let cancelled = false
     setLoading(true)
-    supabase.rpc('tong_quan_dashboard', { p_khu_tro_id: khuId }).then(({ data: res, error: err }) => {
+    setData(null)
+    supabase.rpc('tong_quan_dashboard', { p_khu_tro_id: khuId, p_ky: period ? `${period}-01` : null }).then(({ data: res, error: err }) => {
       if (cancelled) return
       if (err) setError(err.message)
       else {
@@ -50,7 +54,7 @@ export function useDashboard() {
     return () => {
       cancelled = true
     }
-  }, [khuId])
+  }, [khuId, period, revision])
 
-  return { khuList, khuId, setKhuId, data, loading, error }
+  return { period, setPeriod, khuList, khuId, setKhuId, data, loading, error, refresh: () => setRevision(n => n + 1) }
 }

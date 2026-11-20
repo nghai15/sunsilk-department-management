@@ -1,5 +1,9 @@
+import { IssueEvidencePicker } from './IssueEvidencePicker'
+import { mediaExtensions } from './issueMediaValidation'
+import { IssueMedia } from './IssueMedia'
 
 import { useEffect, useState } from 'react'
+import { useParams } from 'react-router-dom'
 import { supabase } from '../../services/supabase'
 import { useAuth } from '../auth/useAuth'
 import { NHAN_TRANG_THAI_SU_CO } from '../../utils/suCo'
@@ -12,6 +16,7 @@ type SuCoItem = {
   tieu_de: string
   mo_ta: string
   anh_urls: string[]
+  minh_chung_xu_ly: string[]
   chi_phi_sua_chua: number
   ghi_chu_xu_ly: string | null
   trang_thai: TrangThaiSuCo
@@ -53,6 +58,7 @@ const CAC_TRANG_THAI: TrangThaiSuCo[] = [
 
 export default function IssueManagementPage() {
   const { user } = useAuth()
+  const { issueId } = useParams()
 
   const [danhSach, setDanhSach] = useState<SuCoItem[]>([])
   const [danhSachPhong, setDanhSachPhong] = useState<PhongItem[]>([])
@@ -67,6 +73,9 @@ export default function IssueManagementPage() {
   const [dangCapNhat, setDangCapNhat] = useState(false)
 
   const [lichSu, setLichSu] = useState<LichSuItem[]>([])
+  const [proofFiles, setProofFiles] = useState<File[]>([])
+  const [proofUrls, setProofUrls] = useState<string[]>([])
+  const [checkingProof, setCheckingProof] = useState(false)
   const [anhDaKy, setAnhDaKy] = useState<string[]>([])
 
   async function taiDanhSach() {
@@ -86,6 +95,8 @@ export default function IssueManagementPage() {
 
     const suCoList = (data ?? []) as SuCoItem[]
     setDanhSach(suCoList)
+    const linked = issueId ? suCoList.find(item => item.id === issueId) : undefined
+    if (linked) void moChiTiet(linked)
 
     const phongIds = [...new Set(suCoList.map(item => item.phong_id))]
 
@@ -122,6 +133,11 @@ export default function IssueManagementPage() {
     setChiPhi(String(item.chi_phi_sua_chua ?? 0))
     setLichSu([])
     setAnhDaKy([])
+    setProofFiles([]); setProofUrls([])
+    if (item.minh_chung_xu_ly?.length) {
+      const result = await supabase.storage.from('anh-su-co').createSignedUrls(item.minh_chung_xu_ly, 3600)
+      setProofUrls(result.data?.map(file => file.signedUrl).filter((url): url is string => Boolean(url)) ?? [])
+    }
     setLoi('')
 
     const { data: historyData, error: historyError } = await supabase
@@ -154,7 +170,7 @@ export default function IssueManagementPage() {
   }
 
   async function capNhatSuCo() {
-    if (!suCoChon || !user) return
+    if (!suCoChon || !user || dangCapNhat || checkingProof) return
 
     const chiPhiSo = Number(chiPhi)
 
@@ -168,22 +184,30 @@ export default function IssueManagementPage() {
       return
     }
 
+    if (trangThaiMoi === 'hoan_tat' && !proofFiles.length && !suCoChon.minh_chung_xu_ly?.length) { setLoi('Cần ảnh hoặc video chứng minh đã xử lý.'); return }
     setDangCapNhat(true)
     setLoi('')
 
-    const { error } = await supabase.rpc('cap_nhat_xu_ly_su_co', {
-      p_su_co_id: suCoChon.id,
-      p_trang_thai: trangThaiMoi,
-      p_ghi_chu_xu_ly: ghiChu.trim() || null,
-      p_chi_phi_sua_chua: chiPhiSo,
-    })
-
-    setDangCapNhat(false)
-
-    if (error) {
-      setLoi(error.message)
-      return
+    const uploaded: string[] = []
+    try {
+      for (const file of proofFiles) {
+        const path = `${suCoChon.phong_id}/xu-ly/${suCoChon.id}/${crypto.randomUUID()}.${mediaExtensions[file.type]}`
+        const result = await supabase.storage.from('anh-su-co').upload(path, file, { contentType: file.type, upsert: false })
+        if (result.error) throw result.error
+        uploaded.push(path)
+      }
+      const { error } = await supabase.rpc('cap_nhat_xu_ly_su_co', {
+        p_su_co_id: suCoChon.id, p_trang_thai: trangThaiMoi,
+        p_ghi_chu_xu_ly: ghiChu.trim() || null, p_chi_phi_sua_chua: chiPhiSo,
+        p_minh_chung: uploaded.length ? uploaded : null,
+      })
+      if (error) throw error
+    } catch (error) {
+      // Không xóa tệp khi chưa rõ yêu cầu lưu đã thành công hay chưa.
+      setLoi(error && typeof error === 'object' && 'message' in error ? String(error.message) : 'Không lưu được minh chứng và chi phí.')
+      setDangCapNhat(false); return
     }
+    setDangCapNhat(false)
 
     alert('Cập nhật xử lý sự cố thành công!')
 
@@ -223,7 +247,7 @@ export default function IssueManagementPage() {
   }
 
   return (
-    <div className="w-full md:w-1/2 mx-auto space-y-4">
+    <div className="w-full max-w-4xl p-6 mx-auto space-y-4">
       {/* Tiêu đề */}
       <div className="flex items-center justify-between gap-3">
         <div>
@@ -327,29 +351,19 @@ export default function IssueManagementPage() {
           {/* Ảnh sự cố */}
           {anhDaKy.length > 0 && (
             <div>
-              <p className="font-medium mb-2">Ảnh sự cố</p>
+              <p className="font-medium mb-2">Ảnh và video sự cố</p>
 
               <div className="grid grid-cols-2 gap-2">
                 {anhDaKy.map((url, index) => (
-                  <a
-                    key={index}
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <img
-                      src={url}
-                      alt={`Ảnh sự cố ${index + 1}`}
-                      className="w-full h-36 object-cover rounded-lg border"
-                    />
-                  </a>
+                  <IssueMedia key={index} url={url} />
                 ))}
               </div>
             </div>
           )}
 
+          {proofUrls.length > 0 && <section><h3 className="mb-2 font-medium">Minh chứng đã xử lý</h3><div className="grid grid-cols-2 gap-3">{proofUrls.map(url => <IssueMedia key={url} url={url} />)}</div></section>}
           {/* Cập nhật xử lý */}
-          <div className="border-t pt-4 space-y-3">
+          <fieldset disabled={user?.vaiTro === 'quan_tri'} className="border-t pt-4 space-y-3 disabled:opacity-60">{user?.vaiTro === 'quan_tri' && <p className="text-sm">Quản trị viên chỉ xem. Quản lý khu trọ phụ trách xử lý sự cố.</p>}
             <h3 className="font-semibold">Cập nhật xử lý</h3>
 
             <div>
@@ -388,7 +402,7 @@ export default function IssueManagementPage() {
 
             <div>
               <label className="block text-sm font-medium mb-1">
-                Chi phí sửa chữa (VNĐ)
+                Phí sửa chữa thu cùng tiền phòng (VNĐ)
               </label>
 
               <input
@@ -400,14 +414,16 @@ export default function IssueManagementPage() {
               />
             </div>
 
+            <p className="text-xs text-gray-500">Để 0 nếu không thu người thuê. Khi hoàn tất, phí được cộng một lần vào hóa đơn nháp từ kỳ hiện tại; nếu đã phát hành sẽ thu ở kỳ sau.</p>
+            <IssueEvidencePicker files={proofFiles} disabled={dangCapNhat} onChange={setProofFiles} onChecking={setCheckingProof} onError={setLoi} />
             <button
               onClick={() => void capNhatSuCo()}
-              disabled={dangCapNhat}
+              disabled={dangCapNhat || checkingProof}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-lg py-3 font-medium"
             >
               {dangCapNhat ? 'Đang cập nhật...' : 'Lưu cập nhật'}
             </button>
-          </div>
+          </fieldset>
 
           {/* Lịch sử xử lý */}
           <div className="border-t pt-4">

@@ -5,12 +5,13 @@ import { BrowserRouter } from 'react-router-dom'
 import './hooks/usePWAInstall'
 import './index.css'
 import App from './App.tsx'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 createRoot(document.getElementById('root')!).render(
  <StrictMode>
   <BrowserRouter>
     <AuthProvider>
-      <App />
+      <ErrorBoundary><App /></ErrorBoundary>
     </AuthProvider>
   </BrowserRouter>
 </StrictMode>,

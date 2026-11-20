@@ -122,7 +122,7 @@ CREATE POLICY khu_tro_xem ON khu_tro FOR SELECT TO authenticated
 CREATE POLICY khu_tro_them ON public.khu_tro FOR INSERT TO authenticated
   WITH CHECK (public.vai_tro_hien_tai() IN ('chu_tro', 'quan_tri'));
 CREATE POLICY khu_tro_sua ON khu_tro FOR UPDATE TO authenticated
-  USING (la_nhan_su_khu_tro(id)) WITH CHECK (la_nhan_su_khu_tro(id));
+  USING (vai_tro_hien_tai() IN ('chu_tro','quan_tri')) WITH CHECK (vai_tro_hien_tai() IN ('chu_tro','quan_tri'));
 CREATE POLICY khu_tro_xoa ON public.khu_tro FOR DELETE TO authenticated
   USING (public.vai_tro_hien_tai() IN ('chu_tro', 'quan_tri'));
 
@@ -147,7 +147,7 @@ CREATE POLICY hop_dong_ghi ON hop_dong FOR ALL TO authenticated
 CREATE POLICY phi_dich_vu_xem ON phi_dich_vu FOR SELECT TO authenticated
   USING (la_nhan_su_khu_tro(khu_tro_id) OR la_nguoi_thue_khu_tro(khu_tro_id));
 CREATE POLICY phi_dich_vu_ghi ON phi_dich_vu FOR ALL TO authenticated
-  USING (la_nhan_su_khu_tro(khu_tro_id)) WITH CHECK (la_nhan_su_khu_tro(khu_tro_id));
+  USING (vai_tro_hien_tai() IN ('chu_tro','quan_tri')) WITH CHECK (vai_tro_hien_tai() IN ('chu_tro','quan_tri'));
 
 CREATE POLICY dich_vu_hop_dong_xem ON dich_vu_hop_dong FOR SELECT TO authenticated
   USING (la_nguoi_thue_hop_dong(hop_dong_id) OR la_nhan_su_hop_dong(hop_dong_id));
@@ -161,7 +161,7 @@ CREATE POLICY chi_so_ghi ON chi_so_cong_to FOR ALL TO authenticated
 
 -- hoa_don: người thuê chỉ thấy hóa đơn đã phát hành của hợp đồng mình
 CREATE POLICY hoa_don_xem ON hoa_don FOR SELECT TO authenticated
-  USING (la_nhan_su_phong(phong_id) OR (NOT la_ban_nhap AND la_nguoi_thue_hop_dong(hop_dong_id)));
+  USING (la_nhan_su_phong(phong_id) OR la_nguoi_thue_hop_dong(hop_dong_id));
 CREATE POLICY hoa_don_ghi ON hoa_don FOR ALL TO authenticated
   USING (la_nhan_su_phong(phong_id)) WITH CHECK (la_nhan_su_phong(phong_id));
 
@@ -226,7 +226,7 @@ END $$;
 INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types) VALUES
   ('anh-cong-to',   'anh-cong-to',   FALSE, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp']),
   ('bien-lai', 'bien-lai', FALSE, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp']),
-  ('anh-su-co',   'anh-su-co',   FALSE, 5242880, ARRAY['image/jpeg', 'image/png', 'image/webp'])
+  ('anh-su-co',   'anh-su-co',   FALSE, 20971520, ARRAY['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm', 'video/quicktime'])
 ON CONFLICT (id) DO UPDATE SET file_size_limit = EXCLUDED.file_size_limit,
                                allowed_mime_types = EXCLUDED.allowed_mime_types, public = FALSE;
 
@@ -252,3 +252,20 @@ CREATE POLICY phong_tep_xoa ON storage.objects FOR DELETE TO authenticated
     OR (bucket_id = 'anh-su-co' AND public.co_the_xu_ly_su_co(public.uuid_an_toan((storage.foldername(name))[1]))));
 
 GRANT SELECT ON tong_quan_phong TO authenticated;
+
+CREATE POLICY cong_to_anh_nguoi_thue_them ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'anh-cong-to' AND vai_tro_hien_tai() = 'nguoi_thue'
+    AND la_nguoi_thue_phong(uuid_an_toan((storage.foldername(name))[1]))
+    AND (storage.foldername(name))[2] = auth.uid()::text);
+
+ALTER TABLE lich_don_gia ENABLE ROW LEVEL SECURITY;
+ALTER TABLE nhat_ky_hoa_don ENABLE ROW LEVEL SECURITY;
+CREATE POLICY gia_xem ON lich_don_gia FOR SELECT TO authenticated USING (vai_tro_hien_tai() IN ('chu_tro','quan_tri'));
+CREATE POLICY nhat_ky_hoa_don_xem ON nhat_ky_hoa_don FOR SELECT TO authenticated USING (la_nhan_su_hoa_don(hoa_don_id));
+
+
+CREATE POLICY su_co_tep_chua_gui_xoa ON storage.objects FOR DELETE TO authenticated
+ USING (bucket_id = 'anh-su-co'
+   AND (storage.foldername(name))[2] = auth.uid()::text
+   AND public.la_nguoi_thue_phong(public.uuid_an_toan((storage.foldername(name))[1]))
+   AND NOT EXISTS (SELECT 1 FROM public.su_co s WHERE storage.objects.name = ANY(s.anh_urls)));
