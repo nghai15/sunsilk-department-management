@@ -15,8 +15,11 @@
 .dash-scope span:not(.dash-property-symbol) { display: block; margin-top: 4px; color: #6b7c76; font-size: 11px; }
 .dash-property-symbol { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 11px; background: #1b5546; color: #e4efe7; font-size: 24px; font-family: Georgia, serif; flex-shrink: 0; }
 .dash-filter-fields { display: flex; gap: 12px; }
-.dash-filter-fields label { color: #64776d; font-size: 10px; font-weight: 650; letter-spacing: .3px; }
-.dash-filter-fields input, .dash-filter-fields select { display: block; margin-top: 5px; min-height: 40px; border: 1px solid #dce5df; border-radius: 8px; background: white; padding: 7px 11px; color: #29493c; width: 185px; font-size: 14px; }
+.dash-filter-fields label { display: block; min-width: 0; color: #64776d; font-size: 10px; font-weight: 650; letter-spacing: .3px; }
+.dash-filter-fields input, .dash-filter-fields select { display: block; margin-top: 5px; min-height: 40px; border: 1px solid #dce5df; border-radius: 8px; background: white; padding: 7px 11px; color: #29493c; width: 185px; max-width: 100%; min-width: 0; box-sizing: border-box; height: 42px; font-size: 14px; line-height: 1.2; }
+/* iOS Safari vẽ ô chọn tháng với kích thước riêng, làm tràn khung: ép về cùng cỡ với ô Khu trọ */
+.dash-filter-fields input[type="month"] { -webkit-appearance: none; appearance: none; text-align: left; }
+.dash-filter-fields input[type="month"]::-webkit-date-and-time-value { text-align: left; min-height: 1.2em; margin: 0; }
 .dash-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px; }
 .dash-kpi { background: white; border: 1px solid #e1e8e3; padding: 21px; border-radius: 14px; box-shadow: 0 3px 10px #163c2403; }
 .dash-kpi.featured { background: #174f41; color: white; border-color: #174f41; }

@@ -7,4 +7,7 @@ button:not(:disabled) { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 :focus-visible { outline: 3px solid #78b59f; outline-offset: 3px; }
 input, textarea, select { font-size: 16px; }
+@keyframes drawer-in { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+.drawer-in { animation: drawer-in 0.2s ease-out; }
+@media (prefers-reduced-motion: reduce) { .drawer-in { animation: none; } }
 @media print { nav, button { display: none !important; } body { background: white; } }

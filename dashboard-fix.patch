@@ -1,0 +1,47 @@
+diff --git a/frontend/src/features/dashboard/StaffDashboard.tsx b/frontend/src/features/dashboard/StaffDashboard.tsx
+index 86fb02f..ac2e865 100644
+--- a/frontend/src/features/dashboard/StaffDashboard.tsx
++++ b/frontend/src/features/dashboard/StaffDashboard.tsx
+@@ -36,19 +36,11 @@ export default function StaffDashboard() {
+           <div className="dash-occupancy"><div className="dash-ring" role="img" aria-label={`${occupancy}% phòng đang thuê`} style={{ background: `conic-gradient(#147d64 0% ${occupancy}%, #e8eeeb ${occupancy}% 100%)` }}><div><strong>{data.tong_so_phong ? `${occupancy}%` : '—'}</strong><span>Lấp đầy</span></div></div><dl className="dash-room-legend">{[['Đang thuê', data.phong_dang_thue, ''], ['Còn trống', data.phong_trong, 'light'], ['Đang bảo trì', data.phong_bao_tri, 'amber']].map(([label, count, tone]) => <div key={label}><dt><i className={`dash-dot ${tone}`} />{label}</dt><dd>{count}<span> phòng</span></dd></div>)}</dl></div>
+         </section>
+       </div>
+-      <div className="dash-two-columns bottom">
+-        <section className="dash-panel"><div className="dash-panel-heading"><div><h2>Cần theo dõi</h2><p>Các đầu việc để giữ hoạt động thông suốt</p></div><span className="dash-badge neutral">Ưu tiên</span></div>
+-          <Link className="dash-task" to="/billing"><span className="dash-task-icon amber" aria-hidden="true">₫</span><div><strong>Hóa đơn quá hạn</strong><p>Kiểm tra công nợ trong kỳ {data.thang_nam}</p></div><b className={data.so_hoa_don_qua_han ? 'dash-count red' : 'dash-count'}>{data.so_hoa_don_qua_han}</b><span aria-hidden="true">→</span></Link>
+-          <Link className="dash-task" to="/billing"><span className="dash-task-icon" aria-hidden="true">✓</span><div><strong>Thanh toán chờ xác nhận</strong><p>Đối chiếu biên lai trước khi ghi nhận tiền thu</p></div><b className="dash-count">{data.so_hoa_don_cho_xac_nhan}</b><span aria-hidden="true">→</span></Link>
+-          <Link className="dash-task" to="/issue-management"><span className="dash-task-icon blue" aria-hidden="true">!</span><div><strong>Sự cố chưa hoàn tất</strong><p>{user?.vaiTro === 'quan_tri' ? 'Theo dõi tiến độ xử lý của quản lý' : 'Tiếp nhận và phản hồi yêu cầu của người thuê'}</p></div><b className="dash-count">{data.so_su_co_dang_mo}</b><span aria-hidden="true">→</span></Link>
+-        </section>
+-        <section className="dash-panel"><div className="dash-panel-heading"><div><h2>Truy cập nhanh</h2><p>Các chức năng thường dùng</p></div></div><div className="dash-shortcuts">
+-          <Link to="/hop-dong"><span className="dash-shortcut-top">01 <span>↗</span></span><strong>Hợp đồng</strong><span>{admin ? 'Quản lý hợp đồng thuê' : 'Tra cứu hợp đồng'}</span></Link>
+-          <Link to={admin ? '/nguoi-thue' : '/khu-phong'}><span className="dash-shortcut-top">02 <span>↗</span></span><strong>{admin ? 'Người thuê' : 'Khu & phòng'}</strong><span>{admin ? 'Hồ sơ và tài khoản' : 'Thông tin phòng trọ'}</span></Link>
+-          <Link to="/billing"><span className="dash-shortcut-top">03 <span>↗</span></span><strong>Hóa đơn</strong><span>Đối soát & thanh toán</span></Link>
+-          <Link to="/thong_bao"><span className="dash-shortcut-top">04 <span>↗</span></span><strong>Thông báo</strong><span>Cập nhật & gửi thông tin</span></Link>
+-        </div></section>
+-      </div>
++      <section className="dash-panel"><div className="dash-panel-heading"><div><h2>Cần theo dõi</h2><p>Các đầu việc để giữ hoạt động thông suốt</p></div><span className="dash-badge neutral">Ưu tiên</span></div>
++        <Link className="dash-task" to="/billing"><span className="dash-task-icon amber" aria-hidden="true">₫</span><div><strong>Hóa đơn quá hạn</strong><p>Kiểm tra công nợ trong kỳ {data.thang_nam}</p></div><b className={data.so_hoa_don_qua_han ? 'dash-count red' : 'dash-count'}>{data.so_hoa_don_qua_han}</b><span aria-hidden="true">→</span></Link>
++        <Link className="dash-task" to="/billing"><span className="dash-task-icon" aria-hidden="true">✓</span><div><strong>Thanh toán chờ xác nhận</strong><p>Đối chiếu biên lai trước khi ghi nhận tiền thu</p></div><b className="dash-count">{data.so_hoa_don_cho_xac_nhan}</b><span aria-hidden="true">→</span></Link>
++        <Link className="dash-task" to="/issue-management"><span className="dash-task-icon blue" aria-hidden="true">!</span><div><strong>Sự cố chưa hoàn tất</strong><p>{user?.vaiTro === 'quan_tri' ? 'Theo dõi tiến độ xử lý của quản lý' : 'Tiếp nhận và phản hồi yêu cầu của người thuê'}</p></div><b className="dash-count">{data.so_su_co_dang_mo}</b><span aria-hidden="true">→</span></Link>
++      </section>
+     </>}
+   </main>
+ }
+diff --git a/frontend/src/features/dashboard/dashboard.css b/frontend/src/features/dashboard/dashboard.css
+index 8cefce6..02dee95 100644
+--- a/frontend/src/features/dashboard/dashboard.css
++++ b/frontend/src/features/dashboard/dashboard.css
+@@ -15,8 +15,11 @@
+ .dash-scope span:not(.dash-property-symbol) { display: block; margin-top: 4px; color: #6b7c76; font-size: 11px; }
+ .dash-property-symbol { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 11px; background: #1b5546; color: #e4efe7; font-size: 24px; font-family: Georgia, serif; flex-shrink: 0; }
+ .dash-filter-fields { display: flex; gap: 12px; }
+-.dash-filter-fields label { color: #64776d; font-size: 10px; font-weight: 650; letter-spacing: .3px; }
+-.dash-filter-fields input, .dash-filter-fields select { display: block; margin-top: 5px; min-height: 40px; border: 1px solid #dce5df; border-radius: 8px; background: white; padding: 7px 11px; color: #29493c; width: 185px; font-size: 14px; }
++.dash-filter-fields label { display: block; min-width: 0; color: #64776d; font-size: 10px; font-weight: 650; letter-spacing: .3px; }
++.dash-filter-fields input, .dash-filter-fields select { display: block; margin-top: 5px; min-height: 40px; border: 1px solid #dce5df; border-radius: 8px; background: white; padding: 7px 11px; color: #29493c; width: 185px; max-width: 100%; min-width: 0; box-sizing: border-box; height: 42px; font-size: 14px; line-height: 1.2; }
++/* iOS Safari vẽ ô chọn tháng với kích thước riêng, làm tràn khung: ép về cùng cỡ với ô Khu trọ */
++.dash-filter-fields input[type="month"] { -webkit-appearance: none; appearance: none; text-align: left; }
++.dash-filter-fields input[type="month"]::-webkit-date-and-time-value { text-align: left; min-height: 1.2em; margin: 0; }
+ .dash-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px; }
+ .dash-kpi { background: white; border: 1px solid #e1e8e3; padding: 21px; border-radius: 14px; box-shadow: 0 3px 10px #163c2403; }
+ .dash-kpi.featured { background: #174f41; color: white; border-color: #174f41; }
