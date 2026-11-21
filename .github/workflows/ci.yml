@@ -33,5 +33,6 @@ jobs:
           cache: npm
           cache-dependency-path: backend/tests/package-lock.json
       - run: npm ci
+      - run: npm run check:migrations
       - run: npm test
       - run: npm run test:recovery

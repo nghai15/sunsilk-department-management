@@ -4,6 +4,8 @@
 --   Người thuê: 0987654321 (P101), 0976543210 (P201)
 -- Lưu ý: Auth lưu SĐT dạng 84xxxxxxxxx; client đăng nhập bằng +84... hoặc 84...
 
+BEGIN;
+SET LOCAL TIME ZONE 'Asia/Ho_Chi_Minh';
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- 1. Tài khoản Auth (trigger tự tạo hồ sơ public.nguoi_dung với vai_tro 'nguoi_thue', sau đó nâng quyền)
@@ -64,12 +66,12 @@ INSERT INTO phi_dich_vu (id, khu_tro_id, ten, so_tien, cach_tinh) VALUES
 ON CONFLICT DO NOTHING;
 
 -- 5. Hợp đồng (trigger tự chuyển phòng sang 'dang_thue')
-INSERT INTO hop_dong (id, phong_id, nguoi_thue_id, ngay_bat_dau, gia_thue, tien_coc, ngay_thanh_toan, so_nguoi_o, trang_thai)
+INSERT INTO hop_dong (id, phong_id, nguoi_thue_id, ngay_bat_dau, ngay_ket_thuc, gia_thue, tien_coc, ngay_thanh_toan, so_nguoi_o, trang_thai)
 VALUES
  ('e1eebc99-9c0b-4ef8-bb6d-6bb9bd380a51', 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32',
-  (date_trunc('month', now()) - interval '4 months')::date, 3200000, 3200000, 5, 2, 'hieu_luc'),
+  (date_trunc('month', now()) - interval '4 months')::date, (CURRENT_DATE + interval '6 months')::date, 3200000, 3200000, 5, 2, 'hieu_luc'),
  ('e2eebc99-9c0b-4ef8-bb6d-6bb9bd380a52', 'b3eebc99-9c0b-4ef8-bb6d-6bb9bd380a24', 'c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33',
-  (date_trunc('month', now()) - interval '4 months')::date, 3500000, 3500000, 5, 1, 'hieu_luc')
+  (date_trunc('month', now()) - interval '4 months')::date, (CURRENT_DATE + interval '6 months')::date, 3500000, 3500000, 5, 1, 'hieu_luc')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO dich_vu_hop_dong (hop_dong_id, phi_dich_vu_id, so_luong) VALUES
@@ -148,3 +150,9 @@ UPDATE auth.users SET
   phone_change_token = COALESCE(phone_change_token, ''),
   reauthentication_token = COALESCE(reauthentication_token, '')
 WHERE id::text LIKE 'c_eebc99-%';
+
+
+-- Các bảng nghiệp vụ phát sinh (quyết toán, giao dịch ngân hàng, phí sửa chữa,
+-- yêu cầu hợp đồng, mở công tơ, đăng ký push) được migrations tạo đầy đủ.
+-- Chưa có thao tác thì bảng rỗng là hợp lệ; không giả lập giao dịch hay tệp Storage.
+COMMIT;

@@ -5,7 +5,9 @@
   "scripts": {
     "test": "node --test su-co-workflow.test.mjs",
     "test:recovery": "node --experimental-strip-types --test password-recovery.test.mjs",
-    "test:sepay": "node --experimental-strip-types sepay-webhook.test.mjs"
+    "test:sepay": "node --experimental-strip-types sepay-webhook.test.mjs",
+    "test:install": "node fresh-install.local.test.mjs",
+    "check:migrations": "node ../scripts/check-database.mjs --files-only"
   },
   "devDependencies": {
     "@electric-sql/pglite": "0.3.14"

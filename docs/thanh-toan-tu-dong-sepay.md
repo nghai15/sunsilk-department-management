@@ -32,12 +32,12 @@ Schema nằm trong migration 006 hiện có, bản mirror ở backend/supabase/m
 
 ## 2. Thử trên giao diện local
 
-File `backend/sepay.env.local` (được Git bỏ qua) đã có khóa ngẫu nhiên và tài khoản giả TEST-SEPAY cho local. Nếu tạo mới, sao chép các biến SEPAY từ backend/.env.example và tạo khóa ngẫu nhiên tối thiểu 32 ký tự. Không đưa khóa vào frontend hoặc gửi lên chat.
+Cấu hình tại `backend/.env` (được Git bỏ qua), theo mẫu `backend/.env.example`. Khi thử local, dùng tài khoản giả `TEST-SEPAY` và khóa ngẫu nhiên tối thiểu 32 ký tự. Mỗi máy tự cấu hình khóa; không đưa khóa vào frontend hoặc Git.
 
 Chạy từ thư mục backend, giữ cửa sổ này mở:
 
 ```powershell
-npx.cmd supabase functions serve --env-file sepay.env.local
+npx.cmd supabase functions serve --env-file .env
 ```
 
 Trong giao diện chủ trọ: Khu trọ & phòng → Khu trọ → Sửa có ô “Tự động xác nhận chuyển khoản qua SePay”. Với tài khoản thật, điền đủ thông tin nhận tiền rồi bật sau khi kiểm tra kết nối. Riêng tài khoản giả TEST-SEPAY không phải số tài khoản hợp lệ, cấu hình bằng Supabase Studio local: Với dữ liệu giả chỉ dùng kiểm thử:

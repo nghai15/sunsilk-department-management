@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-const content = await readFile(new URL('../sepay.env.local', import.meta.url), 'utf8');
+const content = await readFile(new URL('../.env', import.meta.url), 'utf8');
 const env = Object.fromEntries(content.split(/\r?\n/).filter(line => line.includes('=')).map(line => { const at = line.indexOf('='); return [line.slice(0,at),line.slice(at+1).trim()]; }));
 assert.equal(env.SEPAY_ACCOUNT_NUMBER, 'TEST-SEPAY', 'Phép thử chỉ dùng tài khoản giả local');
 const id = Date.now();

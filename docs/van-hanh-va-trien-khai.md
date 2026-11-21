@@ -10,6 +10,8 @@ npx.cmd supabase start
 npx.cmd supabase functions serve
 ```
 
+Sau khi pull code, `npm run dev` tự cập nhật schema tính năng mới (006) trên Supabase local và giữ dữ liệu. Không cần chạy seed hoặc reset riêng.
+
 Giữ terminal chạy Edge Functions. Trong terminal khác:
 
 ```powershell

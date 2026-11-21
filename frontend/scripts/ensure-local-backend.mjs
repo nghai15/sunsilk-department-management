@@ -1,3 +1,4 @@
+import { syncLocalDatabase } from './sync-local-database.mjs';
 import { readFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 
@@ -16,6 +17,7 @@ if (url && ['localhost', '127.0.0.1', '[::1]'].includes(new URL(url).hostname)) 
   const config = await readFile(new URL('../../backend/supabase/config.toml', import.meta.url), 'utf8');
   const project = config.match(/^project_id\s*=\s*"([a-zA-Z0-9_-]+)"/m)?.[1];
   if (!project) throw new Error('Không tìm thấy project_id của Supabase local.');
+  syncLocalDatabase(project);
   const container = `supabase_edge_runtime_${project}`;
   const docker = args => execFileSync('docker', args, { encoding: 'utf8', windowsHide: true, timeout: 20000, stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   try {
