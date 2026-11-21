@@ -36,19 +36,11 @@ export default function StaffDashboard() {
           <div className="dash-occupancy"><div className="dash-ring" role="img" aria-label={`${occupancy}% phòng đang thuê`} style={{ background: `conic-gradient(#147d64 0% ${occupancy}%, #e8eeeb ${occupancy}% 100%)` }}><div><strong>{data.tong_so_phong ? `${occupancy}%` : '—'}</strong><span>Lấp đầy</span></div></div><dl className="dash-room-legend">{[['Đang thuê', data.phong_dang_thue, ''], ['Còn trống', data.phong_trong, 'light'], ['Đang bảo trì', data.phong_bao_tri, 'amber']].map(([label, count, tone]) => <div key={label}><dt><i className={`dash-dot ${tone}`} />{label}</dt><dd>{count}<span> phòng</span></dd></div>)}</dl></div>
         </section>
       </div>
-      <div className="dash-two-columns bottom">
-        <section className="dash-panel"><div className="dash-panel-heading"><div><h2>Cần theo dõi</h2><p>Các đầu việc để giữ hoạt động thông suốt</p></div><span className="dash-badge neutral">Ưu tiên</span></div>
-          <Link className="dash-task" to="/billing"><span className="dash-task-icon amber" aria-hidden="true">₫</span><div><strong>Hóa đơn quá hạn</strong><p>Kiểm tra công nợ trong kỳ {data.thang_nam}</p></div><b className={data.so_hoa_don_qua_han ? 'dash-count red' : 'dash-count'}>{data.so_hoa_don_qua_han}</b><span aria-hidden="true">→</span></Link>
-          <Link className="dash-task" to="/billing"><span className="dash-task-icon" aria-hidden="true">✓</span><div><strong>Thanh toán chờ xác nhận</strong><p>Đối chiếu biên lai trước khi ghi nhận tiền thu</p></div><b className="dash-count">{data.so_hoa_don_cho_xac_nhan}</b><span aria-hidden="true">→</span></Link>
-          <Link className="dash-task" to="/issue-management"><span className="dash-task-icon blue" aria-hidden="true">!</span><div><strong>Sự cố chưa hoàn tất</strong><p>{user?.vaiTro === 'quan_tri' ? 'Theo dõi tiến độ xử lý của quản lý' : 'Tiếp nhận và phản hồi yêu cầu của người thuê'}</p></div><b className="dash-count">{data.so_su_co_dang_mo}</b><span aria-hidden="true">→</span></Link>
-        </section>
-        <section className="dash-panel"><div className="dash-panel-heading"><div><h2>Truy cập nhanh</h2><p>Các chức năng thường dùng</p></div></div><div className="dash-shortcuts">
-          <Link to="/hop-dong"><span className="dash-shortcut-top">01 <span>↗</span></span><strong>Hợp đồng</strong><span>{admin ? 'Quản lý hợp đồng thuê' : 'Tra cứu hợp đồng'}</span></Link>
-          <Link to={admin ? '/nguoi-thue' : '/khu-phong'}><span className="dash-shortcut-top">02 <span>↗</span></span><strong>{admin ? 'Người thuê' : 'Khu & phòng'}</strong><span>{admin ? 'Hồ sơ và tài khoản' : 'Thông tin phòng trọ'}</span></Link>
-          <Link to="/billing"><span className="dash-shortcut-top">03 <span>↗</span></span><strong>Hóa đơn</strong><span>Đối soát & thanh toán</span></Link>
-          <Link to="/thong_bao"><span className="dash-shortcut-top">04 <span>↗</span></span><strong>Thông báo</strong><span>Cập nhật & gửi thông tin</span></Link>
-        </div></section>
-      </div>
+      <section className="dash-panel"><div className="dash-panel-heading"><div><h2>Cần theo dõi</h2><p>Các đầu việc để giữ hoạt động thông suốt</p></div><span className="dash-badge neutral">Ưu tiên</span></div>
+        <Link className="dash-task" to="/billing"><span className="dash-task-icon amber" aria-hidden="true">₫</span><div><strong>Hóa đơn quá hạn</strong><p>Kiểm tra công nợ trong kỳ {data.thang_nam}</p></div><b className={data.so_hoa_don_qua_han ? 'dash-count red' : 'dash-count'}>{data.so_hoa_don_qua_han}</b><span aria-hidden="true">→</span></Link>
+        <Link className="dash-task" to="/billing"><span className="dash-task-icon" aria-hidden="true">✓</span><div><strong>Thanh toán chờ xác nhận</strong><p>Đối chiếu biên lai trước khi ghi nhận tiền thu</p></div><b className="dash-count">{data.so_hoa_don_cho_xac_nhan}</b><span aria-hidden="true">→</span></Link>
+        <Link className="dash-task" to="/issue-management"><span className="dash-task-icon blue" aria-hidden="true">!</span><div><strong>Sự cố chưa hoàn tất</strong><p>{user?.vaiTro === 'quan_tri' ? 'Theo dõi tiến độ xử lý của quản lý' : 'Tiếp nhận và phản hồi yêu cầu của người thuê'}</p></div><b className="dash-count">{data.so_su_co_dang_mo}</b><span aria-hidden="true">→</span></Link>
+      </section>
     </>}
   </main>
 }
