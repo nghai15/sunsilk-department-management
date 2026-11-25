@@ -88,6 +88,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (err) throw new Error('Số điện thoại hoặc mật khẩu không đúng.')
   }
 
+  const updateProfilePhoto = async (path: string) => {
+    if (!user) throw new Error('Vui lòng đăng nhập lại.')
+    const { data, error } = await supabase.from('nguoi_dung').update({ anh_dai_dien: path }).eq('id', user.id).select('anh_dai_dien').single()
+    if (error) throw error
+    setUser(current => current?.id === user.id ? { ...current, anhDaiDien: data.anh_dai_dien ?? undefined } : current)
+  }
+
   const signOut = async () => {
     if ('serviceWorker' in navigator) {
       const registration = await navigator.serviceWorker.getRegistration()
@@ -104,7 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, error, signIn, signOut, updateProfilePhoto }}>
       {children}
     </AuthContext.Provider>
   )

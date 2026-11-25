@@ -119,6 +119,24 @@ beforeEach(async () => {
 
 after(async () => { await db.close(); });
 
+test('ảnh đại diện: lưu hồ sơ và chỉ truy cập tệp của chính mình', async () => {
+  const path = `${TENANT_A}/profile.jpg`;
+  await asUser(TENANT_A, async () => {
+    await db.query("INSERT INTO storage.objects(bucket_id,name) VALUES('anh-dai-dien',$1)",[path]);
+    await db.query('UPDATE nguoi_dung SET anh_dai_dien=$1 WHERE id=$2',[path,TENANT_A]);
+    assert.equal((await db.query('SELECT anh_dai_dien FROM nguoi_dung WHERE id=$1',[TENANT_A])).rows[0].anh_dai_dien,path);
+  });
+  await asUser(TENANT_B, async () => {
+    assert.equal((await db.query("SELECT id FROM storage.objects WHERE bucket_id='anh-dai-dien' AND name=$1",[path])).rows.length,0);
+    await rejectsCode(db.query("INSERT INTO storage.objects(bucket_id,name) VALUES('anh-dai-dien',$1)",[`${TENANT_A}/forged.jpg`]),'42501');
+    assert.equal((await db.query("DELETE FROM storage.objects WHERE bucket_id='anh-dai-dien' AND name=$1 RETURNING id",[path])).rows.length,0);
+  });
+  await asUser(TENANT_A, async () => {
+    assert.equal((await db.query("DELETE FROM storage.objects WHERE bucket_id='anh-dai-dien' AND name=$1 RETURNING id",[path])).rows.length,1);
+    await db.query('UPDATE nguoi_dung SET anh_dai_dien=NULL WHERE id=$1',[TENANT_A]);
+  });
+});
+
 test('migration 006 giữ nguyên sự cố và lịch sử cũ', () => {
   assert.equal(legacy.issue.trang_thai, 'hoan_tat');
   assert.equal(legacy.issue.hoan_tat_luc.toISOString(), '2026-10-01T10:00:00.000Z');

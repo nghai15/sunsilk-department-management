@@ -1,3 +1,4 @@
+import { ProfileSummary } from './ProfileSummary'
 import { supabase } from '../services/supabase'
 import { ContractExpiryNotice } from '../features/contracts/ContractExpiryNotice'
 
@@ -39,16 +40,19 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
       setSigningOut(false)
     }
   }
-  const { pathname } = useLocation()
-  // Menu chỉ mở khi đường dẫn lúc mở trùng đường dẫn hiện tại, nên tự đóng khi chuyển trang (kể cả nút Back).
-  const [menuPath, setMenuPath] = useState<string | null>(null)
-  const menuOpen = menuPath === pathname
-  const setMenuOpen = (open: boolean) => setMenuPath(open ? pathname : null)
+  const location = useLocation()
+  const { pathname } = location
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuLocation, setMenuLocation] = useState(location)
+  if (menuLocation !== location) {
+    setMenuLocation(location)
+    setMenuOpen(false)
+  }
   const menuButton = useRef<HTMLButtonElement>(null)
   const closeButton = useRef<HTMLButtonElement>(null)
   useEffect(() => {
     if (!menuOpen) return
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setMenuPath(null) }
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setMenuOpen(false) }
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     window.addEventListener('keydown', onKey)
@@ -81,10 +85,11 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
           <span aria-hidden="true" className="h-0.5 w-5 rounded bg-emerald-900" />
           <span aria-hidden="true" className="h-0.5 w-5 rounded bg-emerald-900" />
         </button>
-        <div className="min-w-0">
-          <p className="truncate font-semibold leading-tight">{user?.hoTen}</p>
-          <p className="text-xs text-gray-500">{user && NHAN_VAI_TRO[user.vaiTro]}</p>
-        </div>
+        <Link to="/" onClick={() => setMenuOpen(false)} aria-label="Sunsilk — Về Dashboard" title="Về Dashboard" className="flex shrink-0 items-center gap-2 rounded-lg text-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-700">
+          <img src="/sunsilk-mark.svg" alt="" width="44" height="44" className="h-11 w-11" />
+          <span className="hidden sm:block"><span className="block text-base font-semibold tracking-[0.18em] text-[#123e35]">SUNSILK</span><span className="mt-0.5 block text-[10px] font-medium uppercase tracking-[0.24em] text-gray-500">Nhà trọ</span></span>
+        </Link>
+        <div className="ml-auto min-w-0"><ProfileSummary roleLabel={user ? NHAN_VAI_TRO[user.vaiTro] : ''} /></div>
       </header>
 
       {menuOpen && (
@@ -116,11 +121,11 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
             <nav aria-label="Điều hướng chính" className="flex-1 space-y-1 overflow-y-auto px-3 py-3">
               {links.map(([to, label]) => {
                 const active = to === '/' ? pathname === to : pathname.startsWith(to)
-                return <Link key={to} to={to} aria-current={active ? 'page' : undefined} className={drawerLinkClass(active)}>{label}</Link>
+                return <Link key={to} to={to} onClick={() => setMenuOpen(false)} aria-current={active ? 'page' : undefined} className={drawerLinkClass(active)}>{label}</Link>
               })}
               <div className="my-3 border-t" role="separator" />
-              <Link to="/thong_bao" aria-current={pathname === '/thong_bao' ? 'page' : undefined} className={drawerLinkClass(pathname === '/thong_bao')}>Thông báo</Link>
-              <Link to="/tai-khoan" aria-current={pathname === '/tai-khoan' ? 'page' : undefined} className={drawerLinkClass(pathname === '/tai-khoan')}>Tài khoản</Link>
+              <Link to="/thong_bao" onClick={() => setMenuOpen(false)} aria-current={pathname === '/thong_bao' ? 'page' : undefined} className={drawerLinkClass(pathname === '/thong_bao')}>Thông báo</Link>
+              <Link to="/tai-khoan" onClick={() => setMenuOpen(false)} aria-current={pathname === '/tai-khoan' ? 'page' : undefined} className={drawerLinkClass(pathname === '/tai-khoan')}>Tài khoản</Link>
             </nav>
 
             <div className="space-y-2 border-t px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">

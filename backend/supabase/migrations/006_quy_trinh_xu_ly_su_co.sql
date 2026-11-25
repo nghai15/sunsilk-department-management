@@ -1243,4 +1243,18 @@ CREATE TRIGGER trg_hoa_don_sau_quyet_toan BEFORE INSERT ON public.hoa_don FOR EA
 DROP TRIGGER IF EXISTS trg_phi_sau_quyet_toan ON public.phi_sua_chua;
 CREATE TRIGGER trg_phi_sau_quyet_toan BEFORE INSERT OR UPDATE ON public.phi_sua_chua FOR EACH ROW EXECUTE FUNCTION public.khoa_phat_sinh_sau_quyet_toan();
 
+
+INSERT INTO storage.buckets(id,name,public,file_size_limit,allowed_mime_types)
+VALUES('anh-dai-dien','anh-dai-dien',false,5242880,ARRAY['image/jpeg','image/png','image/webp'])
+ON CONFLICT(id) DO UPDATE SET public=false,file_size_limit=excluded.file_size_limit,allowed_mime_types=excluded.allowed_mime_types;
+DROP POLICY IF EXISTS avatar_own_read ON storage.objects;
+CREATE POLICY avatar_own_read ON storage.objects FOR SELECT TO authenticated
+USING(bucket_id='anh-dai-dien' AND (storage.foldername(name))[1]=auth.uid()::text);
+DROP POLICY IF EXISTS avatar_own_insert ON storage.objects;
+CREATE POLICY avatar_own_insert ON storage.objects FOR INSERT TO authenticated
+WITH CHECK(bucket_id='anh-dai-dien' AND (storage.foldername(name))[1]=auth.uid()::text);
+DROP POLICY IF EXISTS avatar_own_delete ON storage.objects;
+CREATE POLICY avatar_own_delete ON storage.objects FOR DELETE TO authenticated
+USING(bucket_id='anh-dai-dien' AND (storage.foldername(name))[1]=auth.uid()::text);
+
 COMMIT;
