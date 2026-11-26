@@ -77,7 +77,7 @@ function TenantDialog({ action, onClose, onSaved }: { action: Action; onClose: (
     } catch (err) { setError(err instanceof Error ? err.message : 'Không lưu được dữ liệu.') }
     finally { submitting.current = false; setBusy(false) }
   }
-  return <dialog ref={dialog} aria-labelledby="tenant-dialog-title" onCancel={event => { event.preventDefault(); if (!busy) onClose() }} className="m-auto w-[calc(100%-32px)] max-w-lg max-h-[90dvh] overflow-auto rounded-2xl border-0 bg-white p-6 shadow-2xl backdrop:bg-black/40">
+  return <dialog ref={dialog} onClick={event => { if (busy || event.target !== event.currentTarget) return; const bounds = event.currentTarget.getBoundingClientRect(); if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onClose() }} aria-labelledby="tenant-dialog-title" onCancel={event => { event.preventDefault(); if (!busy) onClose() }} className="m-auto w-[calc(100%-32px)] max-w-lg max-h-[90dvh] overflow-auto rounded-2xl border-0 bg-white p-6 shadow-2xl backdrop:bg-black/40">
     <h2 id="tenant-dialog-title" className="text-xl font-semibold">{action.kind === 'create' ? 'Thêm người thuê' : action.kind === 'update' ? 'Sửa người thuê' : 'Xác nhận xóa người thuê'}</h2>
     <form onSubmit={save} className="mt-5 space-y-4">
       {action.kind === 'delete' ? <p>Bạn muốn xóa <strong>{tenant?.ho_ten}</strong> ({tenant?.so_dien_thoai}) và tài khoản đăng nhập? Chỉ xóa được khi chưa có dữ liệu liên quan.</p> : <>

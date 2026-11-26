@@ -147,7 +147,7 @@ export function DuyetThanhToanUNC({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
           onClick={() => setMoModalAnh(false)}
         >
-          <div className="relative max-h-[90vh] max-w-[90vw]">
+          <div onClick={event => event.stopPropagation()} className="relative max-h-[90vh] max-w-[90vw]">
             <img
               src={anhBienLaiUrl}
               alt="Biên lai phóng to"

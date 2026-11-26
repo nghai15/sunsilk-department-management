@@ -1,7 +1,7 @@
-const CACHE = 'nha-tro-static-v2';
+const CACHE = 'nha-tro-static-v3';
 const OFFLINE = '/offline.html';
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll([OFFLINE, '/manifest.json', '/icons/icon-192x192.png', '/icons/icon-512x512.png'])));
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll([OFFLINE, '/manifest.json', '/icons/icon-192x192.png?v=sunsilk-s1', '/icons/icon-512x512.png?v=sunsilk-s1', '/icons/apple-touch-icon.png?v=sunsilk-s1'])));
   self.skipWaiting();
 });
 self.addEventListener('activate', event => {
@@ -33,7 +33,7 @@ self.addEventListener('fetch', event => {
 self.addEventListener('push', event => {
   let data = {};
   try { data = event.data?.json() || {}; } catch { data = { body: event.data?.text() }; }
-  event.waitUntil(self.registration.showNotification(data.title || 'Nhà trọ', { body: data.body || 'Bạn có thông báo mới.', icon: '/icons/icon-192x192.png', data: data.data || {} }));
+  event.waitUntil(self.registration.showNotification(data.title || 'Nhà trọ', { body: data.body || 'Bạn có thông báo mới.', icon: '/icons/icon-192x192.png?v=sunsilk-s1', data: data.data || {} }));
 });
 self.addEventListener('notificationclick', event => {
   event.notification.close();

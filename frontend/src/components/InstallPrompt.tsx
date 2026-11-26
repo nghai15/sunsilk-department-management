@@ -23,7 +23,7 @@ export function InstallPrompt() {
           Cài đặt ứng dụng
         </button>
         {showGuide && (
-          <div className="fixed inset-0 bg-black/50 flex items-end justify-center p-4 z-50">
+          <div onClick={event => { if (event.target === event.currentTarget) setShowGuide(false) }} className="fixed inset-0 bg-black/50 flex items-end justify-center p-4 z-50">
             <div className="bg-white rounded-xl p-5 w-full max-w-sm space-y-3">
               <h2 className="font-semibold">Cài đặt trên iPhone / iPad</h2>
               <ol className="list-decimal pl-5 text-sm space-y-1">

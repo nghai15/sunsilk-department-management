@@ -4,8 +4,21 @@ import { supabase } from '../services/supabase'
 import { Modal, errorMessage } from './Modal'
 import { contractDate } from '../features/contracts/contractDates'
 
+function ProfilePhotoPreview({ src, name, onClose }: { src: string; name: string; onClose: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    const dialog = dialogRef.current
+    dialog?.showModal()
+    return () => { dialog?.close() }
+  }, [])
+  return <dialog ref={dialogRef} aria-label={`Ảnh đại diện ${name}`} onCancel={event => { event.preventDefault(); onClose() }} onClick={onClose} style={{ margin: 'auto', padding: 0, border: 0, background: 'transparent', maxWidth: '92vw', maxHeight: '90dvh', overflow: 'visible' }} className="backdrop:bg-black/80">
+    <img src={src} alt={`Ảnh đại diện ${name}`} referrerPolicy="no-referrer" onClick={event => event.stopPropagation()} style={{ display: 'block', width: 'min(560px, 88vw, 85dvh)', height: 'min(560px, 88vw, 85dvh)', objectFit: 'cover', borderRadius: '50%' }} />
+  </dialog>
+}
+
 function ProfileImage({ src, name, large = false }: { src?: string; name: string; large?: boolean }) {
   const [failed, setFailed] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
   const [imageUrl, setImageUrl] = useState<string>()
   useEffect(() => {
     let cancelled = false
@@ -18,9 +31,16 @@ function ProfileImage({ src, name, large = false }: { src?: string; name: string
   }, [src])
   const size = large ? 'h-24 w-24 text-3xl' : 'h-10 w-10 text-sm'
   const pixels = large ? 96 : 40
-  return <span style={{ display: 'inline-flex', width: pixels, height: pixels, minWidth: pixels, maxWidth: pixels, minHeight: pixels, maxHeight: pixels, flex: '0 0 auto', overflow: 'hidden', borderRadius: '50%' }} className={`${size} items-center justify-center bg-emerald-100 font-semibold text-emerald-900 ring-1 ring-emerald-900/10`}>
+  const avatar = <span style={{ display: 'inline-flex', width: pixels, height: pixels, minWidth: pixels, maxWidth: pixels, minHeight: pixels, maxHeight: pixels, flex: '0 0 auto', overflow: 'hidden', borderRadius: '50%' }} className={`${size} items-center justify-center bg-emerald-100 font-semibold text-emerald-900 ring-1 ring-emerald-900/10`}>
     {imageUrl && !failed ? <img src={imageUrl} alt={`Ảnh đại diện ${name}`} width={pixels} height={pixels} style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover', minWidth: 0 }} onError={() => setFailed(true)} referrerPolicy="no-referrer" /> : <span aria-label={`Ảnh đại diện mặc định của ${name}`}>{name.trim().split(/\s+/).slice(-2).map(word => word[0]).join('').toUpperCase() || 'S'}</span>}
   </span>
+  if (!large || !imageUrl || failed) return avatar
+  return <>
+    <button type="button" onClick={() => setPreviewOpen(true)} aria-label="Phóng to ảnh đại diện" aria-haspopup="dialog" style={{ padding: 0, border: 0, background: 'transparent', borderRadius: '50%', display: 'inline-flex', cursor: 'zoom-in' }}>
+      {avatar}
+    </button>
+    {previewOpen && <ProfilePhotoPreview src={imageUrl} name={name} onClose={() => setPreviewOpen(false)} />}
+  </>
 }
 
 type Contract = { ngay_thanh_toan: number; ngay_ket_thuc: string | null }

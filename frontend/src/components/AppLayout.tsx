@@ -85,9 +85,9 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
           <span aria-hidden="true" className="h-0.5 w-5 rounded bg-emerald-900" />
           <span aria-hidden="true" className="h-0.5 w-5 rounded bg-emerald-900" />
         </button>
-        <Link to="/" onClick={() => setMenuOpen(false)} aria-label="Sunsilk — Về Dashboard" title="Về Dashboard" className="flex shrink-0 items-center gap-2 rounded-lg text-emerald-900 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-700">
-          <img src="/sunsilk-mark.svg" alt="" width="44" height="44" className="h-11 w-11" />
-          <span className="hidden sm:block"><span className="block text-base font-semibold tracking-[0.18em] text-[#123e35]">SUNSILK</span><span className="mt-0.5 block text-[10px] font-medium uppercase tracking-[0.24em] text-gray-500">Nhà trọ</span></span>
+        <Link to="/" onClick={() => setMenuOpen(false)} aria-label="Sunsilk — Về Dashboard" title="Về Dashboard" className="sunsilk-brand focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-emerald-700">
+          <img src="/sunsilk-mark.svg" alt="" width="56" height="56" className="sunsilk-brand-mark" />
+          <span className="sunsilk-brand-copy"><span className="sunsilk-brand-name">SUNSILK</span><span className="sunsilk-brand-description">QUẢN LÝ NHÀ TRỌ</span></span>
         </Link>
         <div className="ml-auto min-w-0"><ProfileSummary roleLabel={user ? NHAN_VAI_TRO[user.vaiTro] : ''} /></div>
       </header>
