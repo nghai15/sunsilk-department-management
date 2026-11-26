@@ -4,13 +4,14 @@ import { Link } from 'react-router-dom'
 import { createClient } from '@supabase/supabase-js'
 import { normalizePhone } from '../../utils/phone'
 import { createPasswordRecovery } from './passwordRecovery'
+import { supabaseUrl } from '../../services/supabase'
 
 const field = 'mt-2 w-full rounded-xl border border-gray-300 px-3 py-3 focus:outline-emerald-700 disabled:bg-gray-50'
 const primary = 'w-full rounded-xl bg-emerald-900 px-4 py-3 font-medium text-white disabled:opacity-50'
 
 export default function ForgotPasswordPage() {
-  const [recovery] = useState(() => createPasswordRecovery(createClient(import.meta.env.VITE_SUPABASE_URL, import.meta.env.VITE_SUPABASE_ANON_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: `password-recovery-${crypto.randomUUID()}` },
+  const [recovery] = useState(() => createPasswordRecovery(createClient(supabaseUrl, import.meta.env.VITE_SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: `password-recovery-${Array.from(crypto.getRandomValues(new Uint8Array(16)), byte => byte.toString(16).padStart(2, '0')).join('')}` },
   })))
   const [step, setStep] = useState<'phone' | 'otp' | 'password' | 'done'>('phone')
   const [phone, setPhone] = useState('')

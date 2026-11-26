@@ -20,10 +20,10 @@ export default function StaffDashboard() {
     {!loading && !error && !khuList.length && <section className="dash-panel dash-empty"><h2>{admin ? 'Bắt đầu với khu trọ đầu tiên' : 'Chưa có khu trọ được phân công'}</h2><p>{admin ? 'Thêm khu trọ và phòng để bắt đầu theo dõi hoạt động.' : 'Liên hệ chủ trọ hoặc quản trị viên để được phân công khu quản lý.'}</p>{admin && <Link className="dash-button primary" to="/khu-phong">Quản lý khu & phòng →</Link>}</section>}
     {!loading && !error && data && <>
       <section className="dash-kpis" aria-label="Chỉ số chính">
-        <article className="dash-kpi featured"><div className="dash-kpi-label">Tiền đã thu <span className="dash-mini-tag">Đã duyệt</span></div><strong>{money(data.tong_da_thu)}</strong><span>Từ hóa đơn kỳ {data.thang_nam}</span></article>
-        <article className="dash-kpi"><div className="dash-kpi-label">Công nợ còn lại <i className="dash-dot amber" /></div><strong>{money(data.tong_con_no)}</strong><span>{data.so_hoa_don_qua_han} hóa đơn quá hạn trong kỳ</span></article>
-        <article className="dash-kpi"><div className="dash-kpi-label">Phòng đang thuê <i className="dash-dot" /></div><strong>{data.phong_dang_thue}<small> / {data.tong_so_phong} phòng</small></strong><span>{data.phong_trong} phòng trống · {occupancy}% lấp đầy hiện tại</span></article>
-        <article className="dash-kpi"><div className="dash-kpi-label">Sự cố đang mở <i className="dash-dot blue" /></div><strong>{data.so_su_co_dang_mo}<small> yêu cầu</small></strong><span>Chờ tiếp nhận, đang xử lý hoặc còn vướng mắc</span></article>
+        <Link to="/billing" className="dash-kpi featured"><div className="dash-kpi-label">Tiền đã thu <span className="dash-mini-tag">Đã duyệt</span></div><strong>{money(data.tong_da_thu)}</strong><span>Từ hóa đơn kỳ {data.thang_nam}</span></Link>
+        <Link to="/billing" className="dash-kpi"><div className="dash-kpi-label">Công nợ còn lại <i className="dash-dot amber" /></div><strong>{money(data.tong_con_no)}</strong><span>{data.so_hoa_don_qua_han} hóa đơn quá hạn trong kỳ</span></Link>
+        <Link to="/khu-phong" className="dash-kpi"><div className="dash-kpi-label">Phòng đang thuê <i className="dash-dot" /></div><strong>{data.phong_dang_thue}<small> / {data.tong_so_phong} phòng</small></strong><span>{data.phong_trong} phòng trống · {occupancy}% lấp đầy hiện tại</span></Link>
+        <Link to="/issue-management" className="dash-kpi"><div className="dash-kpi-label">Sự cố đang mở <i className="dash-dot blue" /></div><strong>{data.so_su_co_dang_mo}<small> yêu cầu</small></strong><span>Chờ tiếp nhận, đang xử lý hoặc còn vướng mắc</span></Link>
       </section>
       <div className="dash-two-columns">
         <section className="dash-panel"><div className="dash-panel-heading"><div><h2>Tình hình thu tiền</h2><p>Hóa đơn đã phát hành · Kỳ {data.thang_nam}</p></div><Link className="dash-text-link" to="/billing">Xem hóa đơn ↗</Link></div>

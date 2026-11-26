@@ -89,7 +89,15 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
           <img src="/sunsilk-mark.svg" alt="" width="56" height="56" className="sunsilk-brand-mark" />
           <span className="sunsilk-brand-copy"><span className="sunsilk-brand-name">SUNSILK</span><span className="sunsilk-brand-description">QUẢN LÝ NHÀ TRỌ</span></span>
         </Link>
-        <div className="ml-auto min-w-0"><ProfileSummary roleLabel={user ? NHAN_VAI_TRO[user.vaiTro] : ''} /></div>
+        <div className="ml-auto flex min-w-0 items-center gap-2 sm:gap-3">
+          <Link to="/thong_bao" aria-label="Thông báo" aria-current={pathname === '/thong_bao' ? 'page' : undefined} className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 ${pathname === '/thong_bao' ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-gray-200 text-emerald-900 hover:bg-emerald-50'}`}>
+            <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+              <path d="M10 21h4" />
+            </svg>
+          </Link>
+          <div className="min-w-0"><ProfileSummary roleLabel={user ? NHAN_VAI_TRO[user.vaiTro] : ''} onLogout={() => { setLogoutError(''); logoutDialog.current?.showModal() }} /></div>
+        </div>
       </header>
 
       {menuOpen && (
