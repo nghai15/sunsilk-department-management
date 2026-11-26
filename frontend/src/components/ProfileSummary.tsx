@@ -44,7 +44,7 @@ function ProfileImage({ src, name, large = false }: { src?: string; name: string
 }
 
 type Contract = { ngay_thanh_toan: number; ngay_ket_thuc: string | null }
-export function ProfileSummary({ roleLabel }: { roleLabel: string }) {
+export function ProfileSummary({ roleLabel, onLogout }: { roleLabel: string; onLogout: () => void }) {
   const { user, updateProfilePhoto } = useAuth()
   const picker = useRef<HTMLInputElement>(null)
   const uploadLock = useRef(false)
@@ -120,6 +120,9 @@ export function ProfileSummary({ roleLabel }: { roleLabel: string }) {
         {[['Họ và tên', user.hoTen], ['Số điện thoại', user.soDienThoai || 'Chưa cập nhật'], ['Ngày đóng tiền', payment], ['Ngày hết hạn hợp đồng', expiry]].map(([label, value]) => <div key={label}><dt className="text-sm text-gray-500">{label}</dt><dd className="mt-1 break-words font-medium">{value}</dd></div>)}
       </dl>
       {error && <p role="alert" className="mt-5 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}<button type="button" className="ml-2 underline" onClick={() => setRevision(n => n + 1)}>Thử lại</button></p>}
+      <div className="mt-6 border-t border-gray-100 pt-5">
+        <button type="button" disabled={uploading} onClick={onLogout} className="w-full rounded-xl border border-red-200 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:opacity-50">Đăng xuất</button>
+      </div>
     </Modal>}
   </>
 }

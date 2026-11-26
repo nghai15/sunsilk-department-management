@@ -96,7 +96,7 @@ export function AppLayout({ wide = false }: { wide?: boolean }) {
               <path d="M10 21h4" />
             </svg>
           </Link>
-          <div className="min-w-0"><ProfileSummary roleLabel={user ? NHAN_VAI_TRO[user.vaiTro] : ''} /></div>
+          <div className="min-w-0"><ProfileSummary roleLabel={user ? NHAN_VAI_TRO[user.vaiTro] : ''} onLogout={() => { setLogoutError(''); logoutDialog.current?.showModal() }} /></div>
         </div>
       </header>
 
