@@ -4,6 +4,8 @@
 --   Người thuê: 0987654321 (P101), 0976543210 (P201)
 -- Lưu ý: Auth lưu SĐT dạng 84xxxxxxxxx; client đăng nhập bằng +84... hoặc 84...
 
+BEGIN;
+SET LOCAL TIME ZONE 'Asia/Ho_Chi_Minh';
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- 1. Tài khoản Auth (trigger tự tạo hồ sơ public.nguoi_dung với vai_tro 'nguoi_thue', sau đó nâng quyền)
@@ -16,20 +18,24 @@ FROM (VALUES
   ('c1eebc99-9c0b-4ef8-bb6d-6bb9bd380a31', '84901234567', 'Nguyễn Văn Chủ Nhà'),
   ('c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32', '84987654321', 'Trần Thị Thuê'),
   ('c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33', '84976543210', 'Lê Văn Khách'),
-  ('c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34', '84911111111', 'Phạm Thị Quản Lý')
+  ('c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34', '84911111111', 'Phạm Thị Quản Lý'),
+  ('c5eebc99-9c0b-4ef8-bb6d-6bb9bd380a35', '84922222222', 'Trần Quản Trị')
 ) AS v(id, so_dien_thoai, ho_ten)
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO auth.identities (user_id, provider_id, identity_data, provider, last_sign_in_at)
-SELECT id, phone, jsonb_build_object('sub', id::text, 'phone', phone, 'phone_verified', true), 'phone', NOW()
+-- created_at/updated_at bắt buộc có giá trị: nếu để NULL, GoTrue báo 500 "Database error querying schema" khi đăng nhập
+INSERT INTO auth.identities (user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+SELECT id, phone, jsonb_build_object('sub', id::text, 'phone', phone, 'phone_verified', true), 'phone', NOW(), NOW(), NOW()
 FROM auth.users WHERE id IN ('c1eebc99-9c0b-4ef8-bb6d-6bb9bd380a31','c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32',
-                             'c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33','c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34')
+                             'c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33','c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34',
+                             'c5eebc99-9c0b-4ef8-bb6d-6bb9bd380a35')
   AND NOT EXISTS (SELECT 1 FROM auth.identities i WHERE i.user_id = auth.users.id);
 
 UPDATE nguoi_dung SET vai_tro = 'chu_tro', cccd = '079090001122' WHERE id = 'c1eebc99-9c0b-4ef8-bb6d-6bb9bd380a31';
 UPDATE nguoi_dung SET cccd = '079092003344' WHERE id = 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32';
 UPDATE nguoi_dung SET cccd = '079095005566' WHERE id = 'c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33';
 UPDATE nguoi_dung SET vai_tro = 'quan_ly' WHERE id = 'c4eebc99-9c0b-4ef8-bb6d-6bb9bd380a34';
+UPDATE nguoi_dung SET vai_tro = 'quan_tri' WHERE id = 'c5eebc99-9c0b-4ef8-bb6d-6bb9bd380a35';
 
 -- 2. Khu trọ (kèm tài khoản nhận tiền để sinh VietQR: 970436 = Vietcombank)
 INSERT INTO khu_tro (id, ten, dia_chi, so_tang, don_gia_dien, don_gia_nuoc, phi_internet,
@@ -60,12 +66,12 @@ INSERT INTO phi_dich_vu (id, khu_tro_id, ten, so_tien, cach_tinh) VALUES
 ON CONFLICT DO NOTHING;
 
 -- 5. Hợp đồng (trigger tự chuyển phòng sang 'dang_thue')
-INSERT INTO hop_dong (id, phong_id, nguoi_thue_id, ngay_bat_dau, gia_thue, tien_coc, ngay_thanh_toan, so_nguoi_o, trang_thai)
+INSERT INTO hop_dong (id, phong_id, nguoi_thue_id, ngay_bat_dau, ngay_ket_thuc, gia_thue, tien_coc, ngay_thanh_toan, so_nguoi_o, trang_thai)
 VALUES
  ('e1eebc99-9c0b-4ef8-bb6d-6bb9bd380a51', 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32',
-  (date_trunc('month', now()) - interval '4 months')::date, 3200000, 3200000, 5, 2, 'hieu_luc'),
+  (date_trunc('month', now()) - interval '4 months')::date, (CURRENT_DATE + interval '6 months')::date, 3200000, 3200000, 5, 2, 'hieu_luc'),
  ('e2eebc99-9c0b-4ef8-bb6d-6bb9bd380a52', 'b3eebc99-9c0b-4ef8-bb6d-6bb9bd380a24', 'c3eebc99-9c0b-4ef8-bb6d-6bb9bd380a33',
-  (date_trunc('month', now()) - interval '4 months')::date, 3500000, 3500000, 5, 1, 'hieu_luc')
+  (date_trunc('month', now()) - interval '4 months')::date, (CURRENT_DATE + interval '6 months')::date, 3500000, 3500000, 5, 1, 'hieu_luc')
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO dich_vu_hop_dong (hop_dong_id, phi_dich_vu_id, so_luong) VALUES
@@ -133,3 +139,20 @@ INSERT INTO su_co (phong_id, nguoi_thue_id, tieu_de, mo_ta, phan_loai, trang_tha
 SELECT 'b1eebc99-9c0b-4ef8-bb6d-6bb9bd380a22', 'c2eebc99-9c0b-4ef8-bb6d-6bb9bd380a32',
        'Máy lạnh không mát', 'Bật máy lạnh 30 phút vẫn không mát, có tiếng kêu lạ.', 'may_lanh', 'cho_tiep_nhan'
 WHERE NOT EXISTS (SELECT 1 FROM su_co);
+
+UPDATE auth.users SET
+  confirmation_token = COALESCE(confirmation_token, ''),
+  recovery_token = COALESCE(recovery_token, ''),
+  email_change_token_new = COALESCE(email_change_token_new, ''),
+  email_change = COALESCE(email_change, ''),
+  email_change_token_current = COALESCE(email_change_token_current, ''),
+  phone_change = COALESCE(phone_change, ''),
+  phone_change_token = COALESCE(phone_change_token, ''),
+  reauthentication_token = COALESCE(reauthentication_token, '')
+WHERE id::text LIKE 'c_eebc99-%';
+
+
+-- Các bảng nghiệp vụ phát sinh (quyết toán, giao dịch ngân hàng, phí sửa chữa,
+-- yêu cầu hợp đồng, mở công tơ, đăng ký push) được migrations tạo đầy đủ.
+-- Chưa có thao tác thì bảng rỗng là hợp lệ; không giả lập giao dịch hay tệp Storage.
+COMMIT;

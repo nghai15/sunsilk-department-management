@@ -2,6 +2,7 @@
 
 Thư mục này chứa các tài liệu liên quan đến:
 1. **Thiết kế Cơ sở dữ liệu (Database Schema)**
+   - Thứ bậc và quyền các role: [`phan-quyen.md`](phan-quyen.md)
    - Từ điển đầy đủ (bảng, cột, giá trị trạng thái, hàm): [`co-so-du-lieu.md`](co-so-du-lieu.md)
    - Quy trình quản lý tiếp nhận, xử lý và cập nhật sự cố: [`quy-trinh-xu-ly-su-co.md`](quy-trinh-xu-ly-su-co.md)
    - Khu nhà (`khu_tro`), Phòng trọ (`phong_tro`), Người dùng/khách thuê (`nguoi_dung`), Hợp đồng (`hop_dong`)

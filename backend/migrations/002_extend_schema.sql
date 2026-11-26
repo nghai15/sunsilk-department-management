@@ -23,17 +23,17 @@ ALTER TABLE nguoi_dung ADD COLUMN IF NOT EXISTS anh_dai_dien TEXT;
 ALTER TABLE nguoi_dung ADD COLUMN IF NOT EXISTS dang_hoat_dong BOOLEAN NOT NULL DEFAULT TRUE;
 
 -- Tự tạo hồ sơ khi có tài khoản Auth mới. Role KHÔNG lấy từ metadata do client gửi
--- (tránh tự phong quyền): luôn là 'nguoi_thue'; chủ trọ do admin nâng quyền bằng service vai_tro.
+-- Tránh tự phong quyền: tài khoản mới luôn là 'nguoi_thue'.
 CREATE OR REPLACE FUNCTION xu_ly_tai_khoan_moi() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  INSERT INTO public.nguoi_dung (id, so_dien_thoai, ho_ten, vai_tro)
+  INSERT INTO public.nguoi_dung (id, so_dien_thoai, ho_ten, vai_tro, cccd)
   VALUES (
     NEW.id,
     -- Supabase lưu SĐT dạng E.164 không dấu '+': 84901234567 -> 0901234567
     regexp_replace(COALESCE(NULLIF(NEW.phone, ''), NEW.raw_user_meta_data ->> 'so_dien_thoai', NEW.id::text), '^\+?84', '0'),
     COALESCE(NULLIF(NEW.raw_user_meta_data ->> 'ho_ten', ''), 'Người dùng mới'),
-    'nguoi_thue'
+    'nguoi_thue', NULLIF(NEW.raw_user_meta_data ->> 'cccd', '')
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
@@ -88,6 +88,8 @@ ALTER TABLE hop_dong
 CREATE UNIQUE INDEX IF NOT EXISTS uq_hop_dong_mot_hieu_luc_moi_phong
   ON hop_dong(phong_id) WHERE trang_thai = 'hieu_luc';
 CREATE INDEX IF NOT EXISTS idx_hop_dong_nguoi_thue ON hop_dong(nguoi_thue_id) WHERE trang_thai = 'hieu_luc';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_hop_dong_mot_hieu_luc_moi_nguoi_thue
+  ON hop_dong(nguoi_thue_id) WHERE trang_thai = 'hieu_luc';
 
 -- Đồng bộ trạng thái phòng theo hợp đồng
 CREATE OR REPLACE FUNCTION dong_bo_trang_thai_phong() RETURNS trigger
@@ -141,6 +143,7 @@ CREATE TABLE IF NOT EXISTS chi_so_cong_to (
   chi_so_moi INT NOT NULL,
   so_tieu_thu INT GENERATED ALWAYS AS (chi_so_moi - chi_so_cu) STORED,
   duong_dan_anh TEXT,                                  -- đường dẫn trong bucket 'anh-cong-to'
+  chup_luc TIMESTAMPTZ,
   bat_thuong BOOLEAN NOT NULL DEFAULT FALSE,
   ly_do_bat_thuong TEXT,
   nguoi_ghi_id UUID REFERENCES nguoi_dung(id) ON DELETE SET NULL,
@@ -308,3 +311,25 @@ CREATE TABLE IF NOT EXISTS nhat_ky_nhac_no (
   tao_luc TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE (hoa_don_id, loai, ngay_gui)
 );
+
+ALTER TABLE hoa_don ADD COLUMN ghi_chu_kiem_tra text;
+ALTER TABLE hoa_don ADD COLUMN ly_do_dieu_chinh text;
+CREATE TABLE lich_don_gia (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  loai text NOT NULL CHECK (loai IN ('dien','nuoc','phong','dich_vu')),
+  doi_tuong_id uuid NOT NULL,
+  tu_ky date NOT NULL CHECK (tu_ky = date_trunc('month',tu_ky)::date),
+  don_gia numeric(12,2) NOT NULL CHECK (don_gia >= 0),
+  ly_do text NOT NULL CHECK (length(btrim(ly_do)) > 0),
+  nguoi_tao_id uuid REFERENCES nguoi_dung(id),
+  tao_luc timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(loai, doi_tuong_id, tu_ky)
+);
+CREATE TABLE nhat_ky_hoa_don (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), hoa_don_id uuid NOT NULL,
+  nguoi_sua_id uuid REFERENCES nguoi_dung(id), tao_luc timestamptz NOT NULL DEFAULT now(),
+  ly_do text, truoc jsonb, sau jsonb
+);
+
+ALTER TABLE thanh_toan ADD COLUMN ma_giao_dich text;
+ALTER TABLE thanh_toan ADD COLUMN ghi_chu text;

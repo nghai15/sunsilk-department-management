@@ -7,8 +7,15 @@ site_url = "http://localhost:5173"
 
 [auth.sms]
 # Đăng nhập SĐT + mật khẩu; tài khoản do chủ trọ tạo nên không cần xác thực OTP
-enable_signup = false
+enable_signup = true
 enable_confirmations = false
+
+[auth.rate_limit]
+token_verifications = 10
+
+# Chỉ dùng số giả này để kiểm thử OTP local, không áp dụng vào production.
+[auth.sms.test_otp]
+84900000099 = "936284"
 
 [db.seed]
 enabled = true
@@ -25,3 +32,24 @@ entrypoint = "../functions/cron-reminders/index.ts"
 enabled = true
 verify_jwt = false
 entrypoint = "../functions/send-webpush/index.ts"
+
+[auth.sms.twilio]
+enabled = true
+account_sid = "dummy"
+message_service_sid = "dummy"
+auth_token = "dummy"
+
+[functions.manage-tenants]
+enabled = true
+verify_jwt = false
+entrypoint = "../functions/manage-tenants/index.ts"
+
+[functions.manage-staff]
+enabled = true
+verify_jwt = false
+entrypoint = "../functions/manage-staff/index.ts"
+
+[functions.sepay-webhook]
+enabled = true
+verify_jwt = false
+entrypoint = "../functions/sepay-webhook/index.ts"

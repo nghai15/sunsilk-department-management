@@ -1,48 +1,46 @@
-# Backend – PWA Quản Lý Nhà Trọ
+# Backend · Supabase
 
-Sử dụng Supabase: PostgreSQL, Auth, Storage và Edge Functions.
+PostgreSQL, Auth, Storage và Edge Functions. Xem [hướng dẫn chạy dự án](../README.md).
 
-## Yêu cầu
-
-- Node.js từ phiên bản 20 trở lên.
-- Docker Desktop đã cài và đang chạy.
-
-## Cài đặt
-
-Mở Terminal PowerShell trong VS Code tại thư mục gốc dự án:
-
-```powershell
-cd backend
-New-Item -ItemType Directory -Path .\supabase\migrations -Force | Out-Null
-Copy-Item .\migrations\*.sql .\supabase\migrations -Force
-npx.cmd supabase start
-```
-
-Nếu đã liên kết thư mục migrations, bỏ qua hai dòng tạo thư mục và copy.
-
-Lần đầu Supabase sẽ tải Docker image, chạy migrations và nạp dữ liệu mẫu. Nếu hỏi cài package, nhập `y`.
-
-- Studio: http://127.0.0.1:54323
-- API: http://127.0.0.1:54321
-
-## Tài khoản mẫu
-
-Mật khẩu chung: `123456` — chỉ dùng local/dev.
-
-| Vai trò | SĐT đăng nhập |
-|---|---|
-| Chủ trọ | `84901234567` |
-| Quản lý | `84911111111` |
-| Người thuê P101 | `84987654321` |
-| Người thuê P201 | `84976543210` |
-
-## Các lệnh thường dùng
+## Lệnh thường dùng
 
 Chạy tại thư mục `backend`:
 
-| Thao tác | Lệnh |
-|---|---|
-| Khởi động | `npx.cmd supabase start` |
-| Xem trạng thái | `npx.cmd supabase status` |
-| Dừng và giữ dữ liệu | `npx.cmd supabase stop` |
+```powershell
+npx.cmd supabase start
+npx.cmd supabase functions serve
+```
 
+Giữ terminal `functions serve` mở để dùng các chức năng quản lý tài khoản.
+
+- Xem trạng thái và khóa local: `npx.cmd supabase status`.
+- Dừng và giữ dữ liệu: `npx.cmd supabase stop`.
+- Studio: http://127.0.0.1:54323.
+- API: http://127.0.0.1:54321.
+
+## Database
+
+Lần đầu Supabase chạy migrations rồi nạp seed. Hai thư mục `migrations/` và `supabase/migrations/` phải đồng bộ; CLI sử dụng thư mục thứ hai.
+
+Khi chạy frontend bằng `npm run dev`, schema mới trong migration 006 tự cập nhật trên local. Không cần chạy seed hoặc reset riêng. Cơ chế này không cập nhật database online hoặc chạy lại migrations nền 001–005.
+
+Không reset khi cần giữ dữ liệu. Không đưa `.env` hoặc khóa bí mật lên Git.
+
+## Kiểm thử
+
+Chạy tại thư mục gốc:
+
+```powershell
+npm.cmd --prefix backend/tests ci
+npm.cmd --prefix backend/tests test
+```
+
+Kiểm thử cài mới và cập nhật tự động, cần Supabase local đang chạy:
+
+```powershell
+node backend/tests/fresh-install.local.test.mjs
+```
+
+Bài kiểm thử dùng database riêng và dọn sau khi xong, không reset database ứng dụng. Auth/Storage được giả lập tối thiểu.
+
+OTP local dùng số thử `84900000099`, mã `936284`; tài khoản thử do bài kiểm thử tạo. SMS thật cần cấu hình nhà cung cấp. Chi tiết tại [tài liệu vận hành](../docs/van-hanh-va-trien-khai.md) và [kế hoạch SMS](../docs/ke-hoach-sms-otp.md).

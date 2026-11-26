@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { validateMediaFiles, validateVideoDuration } from '../src/features/issues/issueMediaValidation.ts';
+const image = { type: 'image/jpeg', size: 5 * 1024 * 1024 };
+const video = { type: 'video/mp4', size: 20 * 1024 * 1024 };
+assert.doesNotThrow(() => validateMediaFiles([image,image,image,image,video]));
+assert.doesNotThrow(() => validateVideoDuration(9.99));
+for (const duration of [10,10.01,0,-1,Infinity,NaN]) assert.throws(() => validateVideoDuration(duration));
+assert.throws(() => validateMediaFiles([video,video]));
+assert.throws(() => validateMediaFiles(Array(6).fill(image)));
+assert.throws(() => validateMediaFiles([{...video,size:video.size+1}]));
+assert.throws(() => validateMediaFiles([{...image,size:image.size+1}]));
+assert.throws(() => validateMediaFiles([{type:'text/html',size:10}]));
+assert.throws(() => validateMediaFiles([{...video,size:0}]));
+console.log('PASS: mixed media, duration below 10s, image/video size limits, count and unsupported formats.');

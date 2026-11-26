@@ -4,7 +4,7 @@
 //   vd cột `so_dien_thoai` -> `soDienThoai`, bảng `phong_tro` -> `PhongTro`.
 // Từ điển đầy đủ: docs/co-so-du-lieu.md. Khi đổi schema phải cập nhật file này.
 
-export type VaiTro = 'quan_tri' | 'chu_tro' | 'quan_ly' | 'nguoi_thue';
+export type VaiTro = 'chu_tro' | 'quan_tri' | 'quan_ly' | 'nguoi_thue';
 
 export interface NguoiDung {
   id: string;

@@ -1,60 +1,49 @@
-# PWA Quản Lý Nhà Trọ
+# Sunsilk · Quản lý nhà trọ
 
-Ứng dụng PWA (Progressive Web App) hỗ trợ quản lý nhà trọ, căn hộ dịch vụ với giao diện hiện đại (Mobile-First), hỗ trợ hoạt động offline, quét mã VietQR và gửi thông báo nhắc nợ qua Web Push.
+Ứng dụng React + TypeScript + Supabase cho chủ trọ, quản trị, quản lý và người thuê. Quản lý phòng, hợp đồng, điện nước, hóa đơn, thanh toán, sự cố và thông báo.
 
-## 📁 Cấu trúc dự án
+## Chạy local
 
-```text
-pwa-quan-ly-nha-tro/
-├── .github/
-│   └── workflows/              # CI/CD pipeline (build, test, deploy)
-├── docs/                       # Tài liệu thiết kế DB, API specs, wireframe
-├── backend/                    # Edge Functions hoặc Serverless backend
-│   ├── functions/
-│   │   ├── cron-reminders/     # Tác vụ định kỳ nhắc nợ trước/đúng/quá hạn
-│   │   └── send-webpush/       # Xử lý đẩy Web Push notification
-│   ├── migrations/             # SQL schema (Khu nhà, Phòng, Hóa đơn, Sự cố...)
-│   └── seed/                   # Dữ liệu mẫu phục vụ phát triển & test
-├── frontend/                   # Ứng dụng PWA (React/Vue + Tailwind CSS)
-│   ├── public/
-│   │   ├── icons/              # App icons kích thước PWA (192x192, 512x512)
-│   │   ├── manifest.json       # Cấu hình PWA manifest
-│   │   └── sw.js               # Service Worker (offline cache, push listener)
-│   ├── src/
-│   │   ├── assets/             # Hình ảnh, biểu tượng tĩnh
-│   │   ├── components/         # UI components dùng chung
-│   │   │   ├── common/         # Button, Input, Modal, Toast, Badge
-│   │   │   ├── layout/         # Header, BottomNavigation, Sidebar
-│   │   │   └── forms/          # Form chụp ảnh/upload ảnh công tơ, chuyển khoản
-│   │   ├── features/           # Phân tách logic theo domain nghiệp vụ
-│   │   │   ├── auth/           # Đăng nhập số điện thoại/mật khẩu, phân quyền role
-│   │   │   ├── properties/     # Quản lý Khu trọ & Phòng, lọc phòng, hợp đồng
-│   │   │   ├── billing/        # Nhập chỉ số, tính tiền, hóa đơn, VietQR
-│   │   │   ├── issues/         # Báo sự cố, tiến độ xử lý, chi phí
-│   │   │   ├── notifications/  # Hộp thông báo, cấu hình gửi theo phòng/khu
-│   │   │   └── dashboard/      # Bảng tổng quan doanh thu, phòng trống, sự cố
-│   │   ├── hooks/              # Custom hooks (useAuth, usePWAInstall, usePush)
-│   │   ├── services/           # Tương tác Supabase/Firebase API, Storage
-│   │   ├── types/              # TypeScript interface (Room, Bill, Issue, User)
-│   │   ├── utils/              # Format tiền tệ VNĐ, công thức điện nước, tạo VietQR
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   └── vite.config.ts
-└── README.md
+Cần Node.js 22+ và Docker Desktop đang chạy.
+
+Tại `backend`, chạy và giữ terminal mở:
+
+```powershell
+npx.cmd supabase start
+npx.cmd supabase functions serve
 ```
 
-## 🚀 Công nghệ sử dụng
-- **Frontend**: React 18 / Vite / TypeScript / Tailwind CSS
-- **PWA**: Service Worker, Web Push API, Manifest
-- **Backend / BaaS**: Supabase / PostgreSQL / Edge Functions
-- **Tiện ích**: VietQR generation, Image compression, Offline-first storage (IndexedDB)
+Tại `frontend`, cài thư viện và tạo cấu hình ở lần đầu:
 
-## Cập nhật quy trình xử lý sự cố
+```powershell
+npm.cmd ci
+Copy-Item .env.example .env
+```
 
-Quản lý tiếp nhận báo cáo trong khu được phân công, cập nhật trạng thái, ghi chú và chi phí sửa chữa. Trạng thái **Chưa thể xử lý** bắt buộc có lý do và vẫn được tính là sự cố còn mở. Người thuê theo dõi tiến độ và nhận thông báo khi trạng thái thay đổi.
+Điền `VITE_SUPABASE_ANON_KEY` trong `.env` bằng anon key từ `npx.cmd supabase status` (chạy tại `backend`). Sau đó:
 
-- Database đã có migrations 001–005: áp dụng thêm `backend/migrations/006_quy_trinh_xu_ly_su_co.sql`, không cần xóa dữ liệu hoặc chạy lại seed.
-- API cập nhật: `cap_nhat_xu_ly_su_co(...)`; types và nhãn hiển thị frontend đã được bổ sung.
-- Hướng dẫn nghiệp vụ, API và kiểm thử: [Quy trình xử lý sự cố](docs/quy-trinh-xu-ly-su-co.md).
+```powershell
+npm.cmd run dev
+```
 
-Bộ mã hiện chưa có màn hình `features/issues`. Phần cập nhật này cung cấp backend, types và tiện ích trạng thái để tích hợp giao diện.
+Mở http://localhost:5173. Sau khi pull code, chạy lại `npm.cmd run dev`; các cập nhật schema mới trong migration 006 được áp dụng tự động trên local, giữ nguyên dữ liệu.
+
+## Tài khoản mẫu
+
+Mật khẩu chung: `123456` — chỉ dùng local.
+
+| Vai trò | Số điện thoại |
+|---|---|
+| Chủ trọ | `0901234567` |
+| Quản trị | `0922222222` |
+| Quản lý | `0911111111` |
+| Người thuê P101 | `0987654321` |
+| Người thuê P201 | `0976543210` |
+
+## Tài liệu
+
+- [Vận hành, kiểm thử và triển khai](docs/van-hanh-va-trien-khai.md)
+- [Backend](backend/README.md)
+- [Phân quyền](docs/phan-quyen.md)
+- [Thanh toán tự động SePay](docs/thanh-toan-tu-dong-sepay.md)
+- [Kế hoạch SMS](docs/ke-hoach-sms-otp.md)

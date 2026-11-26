@@ -1,21 +1,21 @@
 {
-  "name": "Quản Lý Nhà Trọ PWA",
-  "short_name": "Nhà Trọ PWA",
+  "name": "Sunsilk · Quản lý nhà trọ",
+  "short_name": "Sunsilk",
   "description": "Ứng dụng PWA quản lý phòng trọ, chốt chỉ số điện nước, hoá đơn VietQR và báo sự cố",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f8fafc",
-  "theme_color": "#2563eb",
+  "theme_color": "#064e3b",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icons/icon-192x192.png",
+      "src": "/icons/icon-192x192.png?v=sunsilk-s1",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-512x512.png",
+      "src": "/icons/icon-512x512.png?v=sunsilk-s1",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

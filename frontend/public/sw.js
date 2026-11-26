@@ -1,94 +1,49 @@
-// Service Worker cho PWA Quản lý Nhà Trọ
-// Hỗ trợ offline caching và Web Push notifications
-
-const CACHE_NAME = 'nha-tro-pwa-v1';
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json'
-];
-
-// Cài đặt Service Worker và lưu cache tĩnh
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Pre-caching static assets');
-      return cache.addAll(STATIC_ASSETS);
-    })
-  );
+const CACHE = 'nha-tro-static-v3';
+const OFFLINE = '/offline.html';
+self.addEventListener('install', event => {
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll([OFFLINE, '/manifest.json', '/icons/icon-192x192.png?v=sunsilk-s1', '/icons/icon-512x512.png?v=sunsilk-s1', '/icons/apple-touch-icon.png?v=sunsilk-s1'])));
   self.skipWaiting();
 });
-
-// Kích hoạt SW và dọn cache cũ
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            console.log('[SW] Deleting old cache:', key);
-            return caches.delete(key);
-          }
-        })
-      );
-    })
-  );
-  self.clients.claim();
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    for (const key of await caches.keys()) if (key !== CACHE && key.startsWith('nha-tro-')) await caches.delete(key);
+    await self.clients.claim();
+  })());
 });
-
-// Network-first với fallback cache
-self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
-
-  event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        return caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, networkResponse.clone());
-          return networkResponse;
-        });
-      })
-      .catch(() => caches.match(event.request))
-  );
-});
-
-// Lắng nghe Web Push Notification
-self.addEventListener('push', (event) => {
-  let data = {};
-  if (event.data) {
-    try {
-      data = event.data.json();
-    } catch (e) {
-      data = { title: 'Thông báo mới', body: event.data.text() };
-    }
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (request.mode === 'navigate') {
+    event.respondWith(fetch(request).catch(async () => (await caches.match(OFFLINE)) || Response.error()));
+    return;
   }
-
-  const title = data.title || 'Nhà Trọ PWA';
-  const options = {
-    body: data.body || 'Bạn có thông báo mới.',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-192x192.png',
-    data: data.data || {}
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
+  if (!url.pathname.startsWith('/assets/') && !url.pathname.startsWith('/icons/') && url.pathname !== '/manifest.json') return;
+  event.respondWith((async () => {
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    const response = await fetch(request);
+    if (response.ok && response.type === 'basic') {
+      const cache = await caches.open(CACHE);
+      await cache.put(request, response.clone());
+    }
+    return response;
+  })());
 });
-
-// Xử lý khi người dùng click vào notification
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('push', event => {
+  let data = {};
+  try { data = event.data?.json() || {}; } catch { data = { body: event.data?.text() }; }
+  event.waitUntil(self.registration.showNotification(data.title || 'Nhà trọ', { body: data.body || 'Bạn có thông báo mới.', icon: '/icons/icon-192x192.png?v=sunsilk-s1', data: data.data || {} }));
+});
+self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const urlToOpen = event.notification.data?.url || '/';
-
-  event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      for (const client of windowClients) {
-        if (client.url === urlToOpen && 'focus' in client) {
-          return client.focus();
-        }
-      }
-      if (clients.openWindow) {
-        return clients.openWindow(urlToOpen);
-      }
-    })
-  );
+  event.waitUntil((async () => {
+    let url;
+    try { url = new URL(event.notification.data?.url || '/thong_bao', self.location.origin); } catch { url = new URL('/thong_bao', self.location.origin); }
+    if (url.origin !== self.location.origin) url = new URL('/thong_bao', self.location.origin);
+    for (const client of await self.clients.matchAll({ type: 'window', includeUncontrolled: true })) {
+      if (new URL(client.url).origin === url.origin) { await client.navigate(url.href); return client.focus(); }
+    }
+    return self.clients.openWindow(url.href);
+  })());
 });
